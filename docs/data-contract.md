@@ -1,5 +1,7 @@
 # Snapshot and HTTP contract
 
+[English](data-contract.md) · [简体中文](data-contract.zh-CN.md)
+
 ## Versions
 
 The normalized schema is `dot-board.snapshot/2`. Version 1 task snapshots remain readable and produce an empty Agent roster unless explicit Agent records are supplied. Unknown versions reject the snapshot. The browser keeps its previous successful data after a later failed refresh.

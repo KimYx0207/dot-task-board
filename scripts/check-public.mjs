@@ -4,7 +4,7 @@ import {resolve,relative,sep} from 'node:path';
 
 const root=resolve(process.argv[2]||fileURLToPath(new URL('../',import.meta.url)));
 const allowedFolders=new Set(['src','public','config','tests','fixtures','examples','scripts','docs','.github']);
-const allowedFiles=new Set(['README.md','LICENSE','CONTRIBUTING.md','SECURITY.md','CHANGELOG.md','THIRD_PARTY.md','package.json','server.mjs','worker.mjs','.env.example','.gitignore','.gitattributes']);
+const allowedFiles=new Set(['README.md','README.zh-CN.md','CONTRIBUTING.zh-CN.md','SECURITY.zh-CN.md','CHANGELOG.zh-CN.md','THIRD_PARTY.zh-CN.md','LICENSE','CONTRIBUTING.md','SECURITY.md','CHANGELOG.md','THIRD_PARTY.md','package.json','server.mjs','worker.mjs','.env.example','.gitignore','.gitattributes']);
 const skipped=new Set(['.git','node_modules','dist','coverage']);
 let checked=0;
 async function walk(directory){
