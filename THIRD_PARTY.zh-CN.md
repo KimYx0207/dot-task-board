@@ -9,6 +9,7 @@
 - 图标由简单文本和本模块的基础 SVG favicon 构成，没有引入图标包或图库
 - Workbench 适配器仅映射导出字段，没有复制其 UI、执行引擎或无许可实现
 - GitHub Actions 使用官方 `actions/checkout` 和 `actions/setup-node`，固定到提交 SHA；这些动作在 CI 中运行，不被打包到本应用
+- 作者联系图原样沿用维护者的 [Meta_Kim 公开联系图](https://github.com/KimYx0207/Meta_Kim/blob/5c77918045d2372a5254b8738bdcfaff468bf4f1/docs/images/contact-qr.png)，只用于文档展示，不是应用依赖
 - 本仓库不包含第三方角色定义、核心方法、提示词或能力包
 
 加入第三方代码或依赖前，应先确认来源、许可证兼容性及必要的署名。

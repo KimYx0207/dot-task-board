@@ -132,11 +132,21 @@ node --check dist/server/index.js
 
 Node 服务仅供本机访问。Worker 没有内置账号系统，使用真实数据前，部署平台必须对页面和接口同时提供认证与授权。真实任务、对话、凭据和部署身份应留在公开源码之外。接入私有数据前，请先阅读[安全说明](SECURITY.zh-CN.md)。
 
-## 维护者
+## 联系方式
 
-[GitHub：KimYx0207](https://github.com/KimYx0207) · [官网](https://www.aiking.dev/) · [X](https://x.com/KimYx0207)
+![作者联系方式：公众号与个人微信二维码](docs/images/contact-qr.png)
 
-普通问题请通过 [问题反馈](https://github.com/KimYx0207/dot-task-board/issues) 提供合成复现。涉及安全风险时，按[安全说明](SECURITY.zh-CN.md)中的私密报告方式处理。
+[GitHub：KimYx0207](https://github.com/KimYx0207) · [X：@KimYx0207](https://x.com/KimYx0207) · [官网：aiking.dev](https://www.aiking.dev/)
+
+- 微信公众号：**老金带你玩AI**
+- 个人微信：扫描联系图中的个人微信二维码，备注“AI”加群
+- [飞书知识库：长期更新入口](https://my.feishu.cn/wiki/OhQ8wqntFihcI1kWVDlcNdpznFf)
+
+以上沿用维护者在 [Meta_Kim 联系区](https://github.com/KimYx0207/Meta_Kim/blob/5c77918045d2372a5254b8738bdcfaff468bf4f1/README.zh-CN.md#联系方式)已经公开的联系方式。
+
+### 问题与漏洞反馈
+
+普通问题请通过[问题反馈](https://github.com/KimYx0207/dot-task-board/issues)提供合成复现。涉及漏洞时，请按[安全说明](SECURITY.zh-CN.md)处理，不要将利用细节或私有数据发到公开问题区或群聊。
 
 ## 许可
 
