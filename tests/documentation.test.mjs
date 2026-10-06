@@ -1,4 +1,5 @@
 import test from 'node:test';
+import {createHash} from 'node:crypto';
 import assert from 'node:assert/strict';
 import {readFile,stat,readdir} from 'node:fs/promises';
 import {fileURLToPath} from 'node:url';
@@ -13,7 +14,7 @@ test('documentation has separate complete English and Chinese entry points',asyn
     const en=await read(path+'.md'),zh=await read(path+'.zh-CN.md');
     assert(en.includes(`[简体中文](${name}.zh-CN.md)`),path);
     assert(zh.includes(`[English](${name}.md)`),path);
-    assert(!/\p{Script=Han}/u.test(en.replace(/^.*\[简体中文\].*$/gm,'')),`${path}: English prose must not contain Chinese paragraphs`);
+    assert(!/\p{Script=Han}/u.test(en.replace(/^.*\[简体中文\].*$/gm,'').replaceAll('老金带你玩AI','')),`${path}: English prose must not contain Chinese paragraphs`);
     assert.match(zh,/\p{Script=Han}/u);
   }
 });
@@ -61,4 +62,19 @@ test('all documentation local links and heading anchors resolve',async()=>{
       if(fragment&&absolute.endsWith('.md'))assert(anchors(await readFile(absolute,'utf8')).has(decodeURIComponent(fragment)),`${path}: missing heading ${target}`);
     }
   }
+});
+
+
+test('both README contact sections retain the verified public channels',async()=>{
+  for(const path of ['README.md','README.zh-CN.md']){
+    const text=await read(path);
+    for(const value of ['docs/images/contact-qr.png','老金带你玩AI','https://github.com/KimYx0207','https://x.com/KimYx0207','https://www.aiking.dev/','https://my.feishu.cn/wiki/OhQ8wqntFihcI1kWVDlcNdpznFf'])assert(text.includes(value),`${path}: missing contact ${value}`);
+    assert(text.includes('SECURITY'),`${path}: security reporting remains separate`);
+    assert(!/mailto:/.test(text),`${path}: do not invent a contact email`);
+  }
+});
+
+test('public author contact artwork matches the verified original bytes',async()=>{
+  const data=await readFile(resolve(root,'docs/images/contact-qr.png'));
+  assert.equal(createHash('sha256').update(data).digest('hex'),'68f910168cbe5a6095dfba73648abb06f8f6ad6231c97b8cf0d68e77a07c1f67');
 });

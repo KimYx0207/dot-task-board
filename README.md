@@ -132,11 +132,21 @@ CI uses Node.js 22/24 on standard public Ubuntu runners with read-only permissio
 
 The Node server is local-only. The Worker has no built-in account system: a deployment host must authenticate and authorize access to both the UI and API before real data is used. Keep real tasks, conversations, credentials and deployment identity outside the public source. Read the [security policy](SECURITY.md) before connecting private data.
 
-## Maintainer
+## Contact
 
-[KimYx0207 on GitHub](https://github.com/KimYx0207) · [Website](https://www.aiking.dev/) · [X](https://x.com/KimYx0207)
+![Author contact: WeChat Official Account and personal WeChat QR codes](docs/images/contact-qr.png)
 
-Report ordinary bugs with a synthetic reproduction through [Issues](https://github.com/KimYx0207/dot-task-board/issues). For security concerns, follow the private-reporting guidance in [SECURITY.md](SECURITY.md).
+[GitHub: KimYx0207](https://github.com/KimYx0207) · [X: @KimYx0207](https://x.com/KimYx0207) · [Website: aiking.dev](https://www.aiking.dev/)
+
+- WeChat Official Account: **老金带你玩AI**
+- Personal WeChat: scan the personal WeChat QR code in the contact image and include “AI” in the request to join the group
+- [Feishu knowledge base: long-term updates](https://my.feishu.cn/wiki/OhQ8wqntFihcI1kWVDlcNdpznFf)
+
+These are the maintainer's existing public contact channels, reproduced from [Meta_Kim's contact section](https://github.com/KimYx0207/Meta_Kim/blob/5c77918045d2372a5254b8738bdcfaff468bf4f1/README.md#contact).
+
+### Bugs and security reports
+
+For ordinary bugs, use [Issues](https://github.com/KimYx0207/dot-task-board/issues) with a synthetic reproduction. For vulnerabilities, follow [SECURITY.md](SECURITY.md); do not send exploit details or private data to a public issue or group.
 
 ## License
 
