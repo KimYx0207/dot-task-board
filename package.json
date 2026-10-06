@@ -1,0 +1,12 @@
+{
+  "name": "dot-task-board",
+  "version": "0.1.0",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "description": "A portable read-only Agent and task dashboard for explicit status snapshots",
+  "repository": {"type":"git","url":"https://github.com/KimYx0207/dot-task-board.git"},
+  "bugs": {"url":"https://github.com/KimYx0207/dot-task-board/issues"},
+  "engines": {"node": ">=22"},
+  "scripts": {"start": "node server.mjs", "demo":"node scripts/demo.mjs", "test": "node --test tests/*.test.mjs", "build": "node scripts/build.mjs", "check": "node scripts/check.mjs", "check:public":"node scripts/check-public.mjs"}
+}

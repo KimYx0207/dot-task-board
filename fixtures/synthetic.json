@@ -1,0 +1,10 @@
+{
+  "schemaVersion":"dot-board.snapshot/1",
+  "importedAt":"2026-01-01T12:00:00Z",
+  "source":{"label":"合成示例 · 不是真实项目","mode":"synthetic"},
+  "coverage":{"scope":"仅展示两项合成任务"},
+  "tasks":[
+    {"id":"sample-review","title":"示例：检查导出文档","project":"合成演示","state":"reviewing","stage":"独立检查","ownerRole":"检查者","observedAt":"2026-01-01T11:50:00Z","observation":"示例数据用于说明任务执行和业务验收的区别","nextAction":"核对阅读顺序","nextOwnerRole":"检查者","verification":{"sourceReview":{"state":"pending"},"deployment":{"state":"not_started"},"businessAcceptance":{"state":"unknown"}}},
+    {"id":"sample-paused","title":"示例：暂停的资料整理","project":"合成演示","state":"paused","stage":"等待恢复","observedAt":null,"blocker":"示例任务已暂停","nextAction":"等待明确恢复安排","verification":{"sourceReview":{"state":"unknown"},"deployment":{"state":"not_started"},"businessAcceptance":{"state":"pending"}}}
+  ]
+}

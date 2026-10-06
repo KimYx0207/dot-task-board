@@ -1,0 +1,104 @@
+{
+  "schemaVersion": "dot-board.snapshot/2",
+  "importedAt": "2026-01-01T12:00:00Z",
+  "source": {
+    "label": "合成演示数据 / Synthetic demo",
+    "mode": "synthetic"
+  },
+  "coverage": {
+    "scope": "仅包含示例任务与角色，不代表真实工作"
+  },
+  "tasks": [
+    {
+      "id": "sample-one",
+      "title": "示例：整理交付清单",
+      "project": "演示项目",
+      "state": "running",
+      "observedAt": "2026-01-01T12:00:00Z",
+      "ownerRole": "A role label is not an extra agent"
+    },
+    {
+      "id": "sample-paused",
+      "title": "示例：暂停的资料整理",
+      "project": "演示项目",
+      "state": "paused",
+      "stage": "等待安排",
+      "observedAt": null,
+      "observation": "明确暂停的示例任务不会被当成正在执行",
+      "nextAction": "等待明确安排"
+    }
+  ],
+  "agents": [
+    {
+      "id": "example-root",
+      "name": "示例主协调",
+      "type": "agent",
+      "kind": "coordinator",
+      "role": "总协调",
+      "parentAgentId": null,
+      "projectNames": [],
+      "taskIds": [],
+      "activity": {
+        "state": "running",
+        "summary": "Coordinate the example",
+        "observedAt": "2026-01-01T12:00:00Z"
+      },
+      "source": {
+        "kind": "host_observation",
+        "label": "Synthetic export",
+        "observedAt": "2026-01-01T12:00:00Z"
+      }
+    },
+    {
+      "id": "example-builder",
+      "name": "示例实现者",
+      "type": "subagent",
+      "kind": "owner",
+      "role": "实现",
+      "parentAgentId": "example-root",
+      "projectNames": [
+        "演示项目"
+      ],
+      "taskIds": [
+        "sample-one"
+      ],
+      "activity": {
+        "state": "running",
+        "summary": "Implementing the example",
+        "observedAt": "2026-01-01T12:00:00Z"
+      },
+      "source": {
+        "kind": "host_observation",
+        "label": "Synthetic export",
+        "observedAt": "2026-01-01T12:00:00Z"
+      }
+    },
+    {
+      "id": "example-reviewer",
+      "name": "示例复检者",
+      "type": "subagent",
+      "kind": "reviewer",
+      "role": "独立检查",
+      "parentAgentId": "example-root",
+      "projectNames": [
+        "演示项目"
+      ],
+      "taskIds": [
+        "sample-one"
+      ],
+      "activity": {
+        "state": "waiting",
+        "summary": "等待实现者交付候选",
+        "observedAt": "2026-01-01T12:00:00Z",
+        "blocker": "待收到可复核的候选",
+        "nextAction": "收到候选后按检查清单复核"
+      },
+      "latestResult": null,
+      "source": {
+        "kind": "verified_report",
+        "label": "Synthetic report",
+        "observedAt": "2026-01-01T12:00:00Z"
+      }
+    }
+  ]
+}

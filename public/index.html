@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><meta name="theme-color" content="#f7f8fa"><title>dot 任务看板 · Agent 工作台</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Crect width='40' height='40' rx='12' fill='%2327333f'/%3E%3Ccircle cx='20' cy='20' r='7' fill='%23d0ecbc'/%3E%3C/svg%3E"><link rel="stylesheet" href="/styles.css"><script src="/app.js" defer></script>
+</head>
+<body>
+<a class="skip" href="#workspace">跳到 Agent 列表</a>
+<header class="topbar"><a class="brand" href="/" aria-label="dot 任务看板首页"><span class="brand-mark" aria-hidden="true">●</span><span>dot</span><span class="brand-divider">/</span><span class="brand-name">任务看板</span></a><div class="topbar-meta"><span class="private"><span aria-hidden="true">◈</span> 导入快照</span><span class="read-only">只读</span></div></header>
+<div class="app-layout">
+<aside class="sidebar" aria-label="项目导航"><div class="workspace-label"><span class="workspace-icon" aria-hidden="true">d</span><div><strong>我的工作空间</strong><span>Agent 与项目进展</span></div></div><div class="nav-heading">项目 <span id="project-total"></span></div><nav id="projects" class="project-nav" aria-label="筛选项目"></nav><div class="sidebar-note"><span class="note-symbol" aria-hidden="true">i</span><strong>状态来自观察记录</strong><p>Agent 的运行状态与任务的完成情况分开显示。没有记录的信息会明确留空。</p></div></aside>
+<main>
+<section class="page-heading"><div><p class="eyebrow" id="workspace-caption">全部已知项目</p><h1>Agent 工作台</h1><p class="heading-description">看清谁在负责、谁在等待，以及最近交付了什么</p></div><button id="refresh" class="refresh" type="button"><span aria-hidden="true">↻</span> 重读快照</button></section>
+<section id="summary" class="summary-grid" aria-label="Agent 概览"></section>
+<div id="source" class="source" aria-label="数据来源"><span class="source-indicator" aria-hidden="true"></span><p><strong id="snapshot-mode">状态快照</strong><span id="source-meta">正在读取观察记录…</span></p><span id="source-label" class="source-label"></span></div>
+<p id="notice" class="notice" role="status" aria-live="polite"></p>
+<section class="board-shell" aria-label="Agent 与任务">
+<div class="view-toolbar"><nav class="view-switch" aria-label="切换看板视图"><button id="view-agents" type="button" class="view-button" aria-pressed="true">Agent 关系 <span id="agent-tab-count">0</span></button><button id="view-tasks" type="button" class="view-button" aria-pressed="false">任务进展 <span id="task-tab-count">0</span></button></nav><div class="search-wrap"><span aria-hidden="true">⌕</span><label class="sr-only" for="search">搜索 Agent、任务或项目</label><input id="search" type="search" placeholder="搜索 Agent、任务或项目" autocomplete="off"></div><label class="sr-only" for="project">所属项目</label><select id="project" class="mobile-project"><option value="">全部已知项目</option></select></div>
+<div class="filter-toolbar"><nav id="filters" class="filters" aria-label="筛选状态"></nav><span id="result-count" class="result-count"></span></div>
+<div class="workspace" id="workspace" tabindex="-1"><section class="roster-pane" aria-label="工作列表"><div class="roster-heading"><h2 id="results-label">Agent 关系</h2><p id="relationship-note">只显示有依据的 Agent 与 subagent 关系</p></div><div id="rows" class="rows"><div class="empty"><span class="loading-mark" aria-hidden="true"></span><h2>正在读取状态快照…</h2></div></div></section><aside id="inspector" class="inspector" aria-label="选中项详情" tabindex="-1"><div class="inspector-empty"><span aria-hidden="true">↖</span><h2>从左侧选择一个 Agent</h2><p>查看它的任务、等待原因和最近产出</p></div></aside></div>
+</section>
+<footer><p id="coverage"></p><p id="read-at"></p><p>此页只展示已导入记录，不会启动、恢复或取消任务</p></footer>
+</main></div>
+</body></html>

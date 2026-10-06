@@ -1,0 +1,17 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {readFile,mkdtemp,writeFile,mkdir,rm} from 'node:fs/promises';
+import {spawnSync} from 'node:child_process';
+import {tmpdir} from 'node:os';
+import {join,win32,posix} from 'node:path';
+import {fileURLToPath} from 'node:url';
+import {buildBoard} from '../src/application/board-service.mjs';
+import {boardConfig} from '../config/board.mjs';
+const root=fileURLToPath(new URL('../',import.meta.url));
+const checker=fileURLToPath(new URL('../scripts/check-public.mjs',import.meta.url));
+test('public example is explicitly synthetic and renders an Agent roster',async()=>{const snapshot=JSON.parse(await readFile(new URL('../examples/synthetic-snapshot.json',import.meta.url),'utf8'));const b=buildBoard(snapshot,boardConfig);assert.equal(b.source.mode,'synthetic');assert.equal(b.agents.length,3);assert.equal(b.tasks.length,2);});
+test('publication source passes the public boundary check',()=>{const r=spawnSync(process.execPath,[checker,root],{encoding:'utf8'});assert.equal(r.status,0,r.stderr);});
+test('publication guard rejects credentials and unexpected runtime folders',async()=>{const dir=await mkdtemp(join(tmpdir(),'board-public-test-'));try{await writeFile(join(dir,'README.md'),'Synthetic public test');await mkdir(join(dir,'runtime'));assert.notEqual(spawnSync(process.execPath,[checker,dir]).status,0);await rm(join(dir,'runtime'),{recursive:true});await writeFile(join(dir,'README.md'),'sk-'+'x'.repeat(42));assert.notEqual(spawnSync(process.execPath,[checker,dir]).status,0);}finally{await rm(dir,{recursive:true,force:true});}});
+test('publication guard rejects non-synthetic example data',async()=>{const dir=await mkdtemp(join(tmpdir(),'board-public-test-'));try{await mkdir(join(dir,'examples'));await writeFile(join(dir,'examples','data.json'),JSON.stringify({source:{mode:'reported'},tasks:[]}));assert.notEqual(spawnSync(process.execPath,[checker,dir]).status,0);}finally{await rm(dir,{recursive:true,force:true});}});
+test('outside-checkout path test uses the platform separator',()=>{for(const p of [posix,win32]){const base=p===win32?'C:\\source\\board':'/source/board';const outside=p===win32?'C:\\private-data\\snapshot.json':'/private-data/snapshot.json';const rel=p.relative(base,outside);assert(rel==='..'||rel.startsWith(`..${p.sep}`)||p.isAbsolute(rel));}});
+test('CI is read-only, pinned, bounded and does not deploy',async()=>{const ci=await readFile(new URL('../.github/workflows/ci.yml',import.meta.url),'utf8');assert.match(ci,/contents: read/);assert.match(ci,/persist-credentials: false/);assert.match(ci,/runs-on: ubuntu-24\.04/);assert.match(ci,/timeout-minutes: 10/);for(const line of ci.split('\n').filter(l=>l.includes('uses:')))assert.match(line,/@[a-f0-9]{40}/);assert(!/pull_request_target|upload-artifact|npm publish|id-token: write|contents: write/.test(ci));});

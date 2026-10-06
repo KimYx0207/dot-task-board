@@ -1,0 +1,16 @@
+node_modules/
+dist/
+coverage/
+.env
+.env.*
+!.env.example
+.openai/
+.sites-runtime/
+runtime/
+private/
+*.log
+*.zip
+*.tar.gz
+__pycache__/
+*.pyc
+.DS_Store
