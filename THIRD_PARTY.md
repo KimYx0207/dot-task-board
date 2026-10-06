@@ -1,12 +1,14 @@
 # Source and dependency notes
 
-- 本仓库的展示、读模型、校验和适配代码为本模块编写
-- 没有 npm 运行时或开发依赖；测试使用 Node.js 自带的 `node:test`
-- Node.js 是单独安装的运行环境，本仓库不分发其二进制
-- 页面使用系统字体回退，不下载或分发第三方字体文件
-- 图标由简单文本和本模块的基础 SVG favicon 构成，没有引入图标包或图库
-- Workbench 适配器仅映射导出字段，没有复制其 UI、执行引擎或无许可实现
-- GitHub Actions 使用官方 `actions/checkout` 和 `actions/setup-node`，固定到提交 SHA；这些动作在 CI 中运行，不被打包到本应用
-- 本仓库不包含第三方角色定义、核心方法、提示词或能力包
+[English](THIRD_PARTY.md) · [简体中文](THIRD_PARTY.zh-CN.md)
 
-加入第三方代码或依赖前，应先确认来源、许可证兼容性及必要的署名。
+- The presentation, read model, validation and adapters were written for this module.
+- There are no npm runtime or development dependencies. Tests use Node.js's built-in `node:test`.
+- Node.js is installed separately; its binaries are not distributed here.
+- The UI uses system-font fallbacks without downloading or bundling font files.
+- Icons use simple text and this module's basic SVG favicon; no icon or image library is included.
+- The Workbench adapter maps exported fields only. Its UI, execution engine and unlicensed implementations are not copied.
+- GitHub Actions uses official `actions/checkout` and `actions/setup-node`, pinned to commit SHAs. They run in CI and are not bundled with the application.
+- No third-party role definitions, core methods, prompts or capability packages are included.
+
+Before adding third-party code or dependencies, verify provenance, license compatibility and required attribution.

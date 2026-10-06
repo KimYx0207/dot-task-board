@@ -1,5 +1,7 @@
 # Deployment
 
+[English](deployment.md) · [简体中文](deployment.zh-CN.md)
+
 ## Local Node
 
 `npm start` binds to `127.0.0.1`. Supply `DOT_BOARD_SNAPSHOT_PATH` pointing outside the repository, or a server-side `DOT_BOARD_SNAPSHOT` JSON string. The application does not load `.env` automatically.

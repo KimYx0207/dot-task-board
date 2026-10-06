@@ -1,13 +1,21 @@
 # Changelog
 
+[English](CHANGELOG.md) · [简体中文](CHANGELOG.zh-CN.md)
+
+## Unreleased
+
+- Separate the English and Simplified Chinese README and documentation entry points.
+- Lead with user questions, visible outcomes and a three-step quick start.
+- Add documentation link and language-structure regression checks.
+
 ## 0.1.0 — 2026-10-06
 
-- 发布可独立运行的只读 Agent / 任务看板
-- 提供明确的主 Agent / subagent 关系与项目分组
-- 支持 v2 快照，并兼容 v1 任务快照
-- 区分执行观察、结果、部署和业务验收
-- 提供 Node、Worker 与 Workbench 导出适配
-- 增加过期/未知状态、安全输入校验、合成示例与回归测试
-- 使用 MIT 许可，提供贡献、安全和部署说明
+- Publish a standalone, read-only Agent and task board.
+- Show explicit main-agent/subagent relationships and project grouping.
+- Support v2 snapshots while remaining compatible with v1 task snapshots.
+- Separate activity observations, results, deployment and business acceptance.
+- Provide Node, Worker and Workbench export adapters.
+- Add stale/unknown states, safe input validation, synthetic examples and regression tests.
+- Release under MIT with contribution, security and deployment guidance.
 
-本版本不包含自动原生 Agent 接入、实时事件流、任务控制或公开运行数据。
+This version does not include automatic native-agent integration, a real-time event feed, task controls or public runtime data.
