@@ -48,15 +48,7 @@ The staged directory contains 19 files:
 
 The full application source remains this repository; the staged build is a private deployment artifact. Do not commit it or upload your private configuration to GitHub. Use your supported Sites packaging/version/deployment flow with this exact source revision and private output. Preserve owner-only access. A successful local build does not establish that a new Site has deployed.
 
-### Keep the three entry points separate
-
-| Command | Output | Intended host |
-| --- | --- | --- |
-| `npm run build:sites` | `dist/sites/index.js` | Owner-private Sites; includes manual status, observation overlays, task controls and read-only task-check services |
-| `npm run build` | `dist/server/index.js` | Generic Worker; trusted identity and optional private services require separate integration |
-| `npm run build:candidate` | `dist/candidate/index.js` | Experimental callback/ingress integration, unconfigured and off by default |
-
-Deploying the generic build does not reproduce the private Site's manual-status and observation services. The staging command selects the private build deliberately.
+The `package:sites` command is the current online packaging path. Other build targets are [developer alternatives](deployment.md#build-targets-for-developers), not additional installation steps. Do not deploy the generic build in place of the private Sites bundle.
 
 ## 3. Apply the complete database schema
 
@@ -83,7 +75,7 @@ Set these through your Site's runtime configuration, not source files or browser
 | `DOT_BOARD_OWNER_ID` | The new Site's trusted, Site-specific signed-in owner ID |
 | `DOT_BOARD_AUDIENCE` | The exact HTTPS origin returned for the new Site |
 | `DB` | The Site's D1 binding, with the complete schema |
-| `DOT_BOARD_SNAPSHOT` | Start with `examples/synthetic-snapshot.json`; use your own source later |
+| `DOT_BOARD_SNAPSHOT` | The JSON **contents** of `examples/synthetic-snapshot.json`, not its file path; use your own authorized snapshot contents later |
 | `DOT_BOARD_PROJECT_REGISTRY` | Stable IDs and names matching the chosen snapshot |
 | `DOT_BOARD_INTAKE_ENABLED`, `DOT_BOARD_INTAKE_MCP_ENABLED` | Enable only the configured features |
 | `DOT_BOARD_INTAKE_CONNECTION_VERIFIED`, `DOT_BOARD_INTAKE_READER_VERIFIED`, `DOT_BOARD_INTAKE_WRITER_VERIFIED` | Set to `true` only after that actual connection/flow was checked |
@@ -97,7 +89,7 @@ Create a synthetic registry from the included snapshot if needed:
 node -e "const s=require('./examples/synthetic-snapshot.json'); console.log(JSON.stringify([...new Set(s.tasks.map(t=>t.project))].map((name,i)=>({id:'demo-'+i,name,aliases:[]}))))"
 ```
 
-Leave Events/relay flags off until a separately authorized transport has been configured and validated. Do not publish relay URLs, secrets or real observations. See [owner observations](OWNER_OBSERVATION_UPDATES.md) and [native host contract](NATIVE_HOST_ADAPTER.md) for the additional integration boundary.
+The current private Sites entry disables direct Events delivery and its scheduled drain; an environment flag cannot enable them. Leave Events/relay settings out of the standard installation. The optional separately configured relay bridge is a host-integration experiment, not a required setup step or a verified automatic-execution connection. Do not publish relay URLs, secrets or real observations. See [owner observations](OWNER_OBSERVATION_UPDATES.md) and [native host contract](NATIVE_HOST_ADAPTER.md) for the additional integration boundary.
 
 ## 5. Accept the new online installation
 

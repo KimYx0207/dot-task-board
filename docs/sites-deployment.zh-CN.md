@@ -48,15 +48,7 @@ npm run package:sites -- --hosting "/absolute/private/hosting.json" --out "/abso
 
 完整源码仍是本仓库；构建产物是本次部署的私有文件。不能把产物或私有配置提交到 GitHub。使用平台支持的源码版本、打包和部署流程，将这个确切源码版本及私有产物发布到新 Site，并保持仅所有者访问。本地构建成功不等于新站已经上线。
 
-### 三个入口必须分清
-
-| 命令 | 产物 | 对应宿主 |
-| --- | --- | --- |
-| `npm run build:sites` | `dist/sites/index.js` | 所有者私有 Sites，包含手动状态、观察覆盖、任务控制和只读核验服务 |
-| `npm run build` | `dist/server/index.js` | 通用 Worker，可信身份和可选私有服务需要另外接入 |
-| `npm run build:candidate` | `dist/candidate/index.js` | 尚未配置、默认关闭的实验性回调/认证接入 |
-
-直接部署通用构建不能复现私有 Site 的手动状态与观察服务。打包命令明确选择的是私有入口。
+`package:sites` 是当前在线打包入口。其他构建目标属于[开发者备选入口](deployment.zh-CN.md#开发者构建入口)，不是安装时还要完成的步骤。不要把通用构建当作私有 Sites 产物部署。
 
 ## 3. 应用完整数据库结构
 
@@ -83,7 +75,7 @@ Sites 使用未经改写的 `drizzle/` 日志、全部 8 条 SQL 与全部 8 个
 | `DOT_BOARD_OWNER_ID` | 新 Site 可信认证取得的站点专用所有者 ID |
 | `DOT_BOARD_AUDIENCE` | 平台返回的新站完整 HTTPS origin |
 | `DB` | 已应用完整结构的 D1 绑定 |
-| `DOT_BOARD_SNAPSHOT` | 先用 `examples/synthetic-snapshot.json`，验收后再换自己的来源 |
+| `DOT_BOARD_SNAPSHOT` | 填入 `examples/synthetic-snapshot.json` 的 JSON **文件内容**，不是文件路径；验收后再换自己的获准快照内容 |
 | `DOT_BOARD_PROJECT_REGISTRY` | 与快照项目名称对应的固定 ID 和名称 |
 | `DOT_BOARD_INTAKE_ENABLED`、`DOT_BOARD_INTAKE_MCP_ENABLED` | 仅启用实际配置好的功能 |
 | `DOT_BOARD_INTAKE_CONNECTION_VERIFIED`、`DOT_BOARD_INTAKE_READER_VERIFIED`、`DOT_BOARD_INTAKE_WRITER_VERIFIED` | 对应真实连接/流程验证后才设为 `true` |
@@ -97,7 +89,7 @@ Sites 使用未经改写的 `drizzle/` 日志、全部 8 条 SQL 与全部 8 个
 node -e "const s=require('./examples/synthetic-snapshot.json'); console.log(JSON.stringify([...new Set(s.tasks.map(t=>t.project))].map((name,i)=>({id:'demo-'+i,name,aliases:[]}))))"
 ```
 
-Events/中继开关应保持关闭，直到另行获准的传输实现配置并验收完成。不要公开中继地址、秘密值或真实观察记录。其他接入边界见[所有者观察通道](OWNER_OBSERVATION_UPDATES.md)和[原生宿主契约](NATIVE_HOST_ADAPTER.md)。
+当前私有 Sites 入口禁用直接 Events 投递和定时处理，修改环境开关不能开启。标准安装不配置 Events/中继；可单独配置的中继桥接属于宿主接入实验，不是使用看板必须补做的步骤，也不是已验收的自动执行连接。不要公开中继地址、秘密值或真实观察记录。其他接入边界见[所有者观察通道](OWNER_OBSERVATION_UPDATES.md)和[原生宿主契约](NATIVE_HOST_ADAPTER.md)。
 
 ## 5. 验收新在线站点
 

@@ -12,7 +12,7 @@ webhook subscription, automatic wakeup, or native-executor integration.
   runs synthetic adapter, owner-entry and platform callback tests with network
   sockets disabled. Test mocks are not deployment adapters.
 - `npm test`, `npm run check` and `npm run check:public` check the release plus
-  candidate source. The test pre-step builds both bundles.
+  candidate source. The test pre-step builds all three bundles.
 - `config/wrangler.candidate.jsonc` selects only the candidate bundle. Its gates
   are all off; it has no D1 binding, cron, routes, account, or private services.
 

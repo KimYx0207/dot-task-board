@@ -19,16 +19,19 @@ test('documentation has separate complete English and Chinese entry points',asyn
   }
 });
 
-test('READMEs lead with outcomes and quick start before technical detail',async()=>{
-  for(const [path,start,quick,details] of [
-    ['README.md','## Start here','### Try it in 3 steps','<summary>'],
-    ['README.zh-CN.md','## 从这里开始','### 3 步上手','<summary>']
+test('READMEs lead with the own-dot online setup and link out to developer commands',async()=>{
+  for(const [path,start,quick,guide,install,contribute] of [
+    ['README.md','## Start here','### Try it in 3 steps','docs/sites-deployment.md','INSTALL.md','CONTRIBUTING.md'],
+    ['README.zh-CN.md','## 从这里开始','### 3 步上手','docs/sites-deployment.zh-CN.md','INSTALL.zh-CN.md','CONTRIBUTING.zh-CN.md']
   ]){
     const text=await read(path);
     assert(text.indexOf(start)>0);
     assert(text.indexOf(quick)>text.indexOf(start));
-    assert(text.indexOf(details)>text.indexOf(quick));
-    for(const command of ['npm run demo','DOT_BOARD_SNAPSHOT_PATH','npm run check:public','npm test'])assert(text.includes(command));
+    for(const name of [guide,install,contribute])assert(text.includes(`](${name})`));
+    assert.match(text,/> .*https:\/\/github\.com\/KimYx0207\/dot-task-board/);
+    assert(!/npm run|npm test|DOT_BOARD_|Node\.js|Worker|loopback|环回|回环|oai-authenticated-user-id/.test(text),`${path}: keep implementation details in specialist guides`);
+    const developerDocs=await read(install)+'\n'+await read(contribute)+'\n'+await read(guide);
+    for(const command of ['npm run demo','DOT_BOARD_SNAPSHOT_PATH','npm run check:public','npm test'])assert(developerDocs.includes(command),`${path}: preserve developer command ${command}`);
   }
 });
 

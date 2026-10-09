@@ -1,4 +1,4 @@
-# 安装与验收
+# 开发者可选：本机安装与验证
 
 [English](INSTALL.md) · [简体中文](INSTALL.zh-CN.md)
 
@@ -23,9 +23,7 @@ git --version
 
 ## 2. 获取选定版本
 
-如使用提供的便携 ZIP，先对照随包发布清单核验 SHA-256，再解压到新目录，进入包含 `package.json` 的目录。无需 `npm install`。同时记录压缩包摘要与包版本：预发布的不同源码修订可能使用同一版本号。下文的检查与安装必须始终使用这一份解压源码。
-
-如使用 Git，执行下列命令。仓库默认分支可能与提供的预发布包不同；不要相互替代，也不要默认压缩包已发布到仓库。
+可选开发安装从选定的 Git 修订开始：
 
 ```sh
 git clone https://github.com/KimYx0207/dot-task-board.git
@@ -35,19 +33,18 @@ git rev-parse HEAD
 node -p "JSON.parse(require('node:fs').readFileSync('package.json','utf8')).version"
 ```
 
-将来源、提交和软件包版本与用户选定的版本核对。给出仓库网址，不代表未来版本已经发布。需要的版本尚不可用时，应如实报告，不能把旧版改称新版。
+记录仓库来源、提交与包版本。若用户另行提供 ZIP，先按随包清单核验 SHA-256，再解压到新目录并始终使用这份源码。同一预发布版本号不代表文件完全相同，不要混用 ZIP 和更新的检出源码。
 
 阅读本地脚本后，运行适用检查：
 
 ```sh
 npm run check
 npm run check:public
-npm run build
 npm test
 node --check dist/server/index.js
 ```
 
-分别记录通过、失败与未运行的检查。不要通过关闭认证、输入校验或公开边界检查来继续安装。
+`npm test` 会先由 `pretest` 构建三个目标，本检查顺序无需重复运行单独构建。分别记录通过、失败与未运行的检查。不要通过关闭认证、输入校验或公开边界检查来继续安装。
 
 ## 3. 安装并启动本地应用
 
@@ -145,8 +142,6 @@ node scripts/manage.mjs rollback --dir "/absolute/path/outside-checkout/dot-boar
 
 返回实际安装的提交与版本、运行时、源码与运行数据位置、准确的启停方法、经过验证的本地网址、检查结果和剩余阻塞。分别说明快照展示、本地需求持久化、认证 MCP、托管部署和真实执行，只把实际验证过的接入称为已连接。
 
-## 构建入口与手动状态
+## 在线构建另行配置
 
-`npm run build` 生成通用 Worker `dist/server/index.js`；`npm run build:sites` 生成所有者私密入口 `dist/sites/index.js`；`npm run build:candidate` 生成 `dist/candidate/index.js`。三个产物互不覆盖。Sites 入口仍必须配置可信入口、所有者与受众校验。
-
-通用 Worker 与本机部署没有接通可信的手动状态服务，因此只读展示任务状态并拒绝手动状态写入。只有宿主提供经过身份验证的服务时，才启用快捷状态与备注。需求和队列记录不代表原生执行或自动续跑已接通。
+需要在线产品时，请按[在线 Sites 部署](docs/sites-deployment.zh-CN.md)操作。上述本机模式不提供所有者手动状态编辑，也不代表托管账号已经连接。构建入口差异与可选其他宿主见[部署说明](docs/deployment.zh-CN.md)，不要让 Site 使用者额外执行本机安装步骤。

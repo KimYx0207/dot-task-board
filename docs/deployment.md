@@ -1,20 +1,20 @@
-# Deployment
+# Developer reference: alternative deployment modes
 
 [English](deployment.md) · [简体中文](deployment.zh-CN.md)
 
 For the primary online product, start with [Deploy your own online Site](sites-deployment.md). That guide selects the Sites-specific entry, full schema, owner identity and private deployment artifact. The modes below are optional alternatives; a generic Worker is not a substitute for the full private Sites adapter.
 
-## Choose a mode
+## Optional modes; not the online Site installation sequence
 
 | Mode | Requirements | What it does |
 | --- | --- | --- |
 | Local snapshot | Node.js 24+ and an exported snapshot | Displays observations on loopback |
 | Synthetic demo | Node.js 24+ | Fictional projects, temporary SQLite receipts and queue-state checks without execution |
 | Authenticated intake | Durable storage, project registry and verified owner identity | Saves requests and versioned read/progress receipts |
-| Worker with D1 | A separately configured Worker host and `DB` binding | Runs the same board with optional persisted intake |
+| Generic Worker with D1 | A separately configured Worker host, authentication and `DB` binding | Snapshot UI and optional persisted intake; does not include the Sites-only manual-status and observation services |
 | Queue / Events experiments | Explicit flags plus the required storage and host integration | Records queue intent / delivers through an injected transport |
 
-No npm dependency installation is needed to run, test or build the repository. A hosting provider's CLI and account setup are separate. For an installation handoff, see [INSTALL.md](../INSTALL.md).
+No npm dependency installation is needed to run, test or build the repository. A hosting provider's CLI and account setup are separate. For the optional local installation, see [INSTALL.md](../INSTALL.md). For the online product, use only the [Sites installation sequence](sites-deployment.md).
 
 ## Local snapshot server
 
@@ -52,12 +52,19 @@ Chunking addresses per-value transport limits; it is not encryption. Store sensi
 
 ## Optional D1 storage
 
-A Worker with persistent intake needs a D1-compatible database bound as `DB`. Apply the checked-in SQL to the database selected for this installation:
+For the current complete plain-SQL schema, a generic Worker needs a D1-compatible database bound as `DB`. Apply the entire `migrations/` chain in order to a new database; the first two files alone are not the full current schema:
 
-1. [0000_project_intake.sql](../migrations/0000_project_intake.sql) creates request and receipt-event storage
-2. [0001_events_dispatch.sql](../migrations/0001_events_dispatch.sql) adds experimental queue and Events storage
+1. `0000_project_intake.sql`
+2. `0001_events_dispatch.sql`
+3. `0002_execution_evidence.sql`
+4. `0003_dispatch_guards.sql`
+5. `0004_native_dispatch_journal.sql`
+6. `0005_board_observations.sql`
+7. `0006_board_observation_outbox.sql`
+8. `0007_dispatch_manual_authorizations.sql`
+9. `0008_manual_task_status.sql`
 
-The full plain-SQL/local chain also requires `0002_execution_evidence.sql`, `0003_dispatch_guards.sql`, `0004_native_dispatch_journal.sql`, `0005_board_observations.sql`, `0006_board_observation_outbox.sql`, `0007_dispatch_manual_authorizations.sql` and `0008_manual_task_status.sql` for those features. For Sites, use the separate complete Drizzle chain in [the online guide](sites-deployment.md); never apply both chains to the same database.
+A complete schema does not enable every host-specific feature. **Sites deployments use the separate full Drizzle chain in [the online guide](sites-deployment.md), not these instructions.** Never apply both chains to the same database. Managed local installation applies its own plain-SQL migration chain; do not manually repeat it.
 
 Use the host's documented migration tooling, record which database is being changed, and back up existing data before an upgrade. The plain SQL is checked in; a schema generator is not a runtime requirement. A missing table disables the corresponding capability; do not announce intake as ready from process health alone.
 
@@ -65,7 +72,7 @@ An ordinary Worker deployment requires its own configuration for bindings, routi
 
 ## Runtime configuration
 
-All booleans below require the exact string `true`; absent optional flags remain off.
+This table describes the generic adapter, not a second configuration checklist for Sites. All booleans below require the exact string `true`; absent optional flags remain off. The current private Sites entry forcibly disables direct Events delivery regardless of its flag; see [the current integration scope](integrations.md).
 
 | Variable | Purpose |
 | --- | --- |
@@ -92,6 +99,16 @@ Browser submission requires same-origin JSON requests. This protects the intende
 
 ## Refresh, events and validation
 
-Refresh rereads supplied records without updating their observation times. An exporter or polling service must be configured separately. Events additionally require an authorized, address-pinned transport and an explicitly configured scheduled drain. There is no bundled Cloudflare callback adapter or native worker scheduler.
+Refresh rereads supplied records without updating their observation times. An exporter or polling service must be configured separately. For the generic host experiment, Events additionally require an authorized transport contract and a separately configured scheduled drain; see [the two transport contracts](integrations.md). Candidate transport source is included, but no production callback connection or native execution scheduler is supplied or verified. The standard private Sites entry keeps direct Events and scheduled draining disabled.
 
 Verify signed-out access denial, owner isolation, save/retry/read/event flows and any selected host's behavior with synthetic data before connecting private records. A 390px frame checks layout, not a real phone. Verify real devices and live integrations separately before claiming their acceptance. Provider limits and charges depend on the chosen account and configuration; no free-service or throughput guarantee is made here.
+
+## Build targets for developers
+
+| Command | Output | Scope |
+| --- | --- | --- |
+| `npm run build:sites` | `dist/sites/index.js` | Current owner-private Sites adapter: manual status, observations, task controls and read-only task checks |
+| `npm run build` | `dist/server/index.js` | Generic Worker; requires separate trusted identity integration and does not inject the Sites-only services |
+| `npm run build:candidate` | `dist/candidate/index.js` | Experimental ingress/callback development target; not part of the standard Site installation or a verified automatic-execution release |
+
+Outputs are separate. The online staging command selects the Sites build and packages it at the host's expected path; follow [the online guide](sites-deployment.md). Plain Worker and local installs keep manual-status editing unavailable unless an appropriate trusted host service is supplied.

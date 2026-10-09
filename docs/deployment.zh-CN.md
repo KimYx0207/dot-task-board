@@ -1,20 +1,20 @@
-# 部署说明
+# 开发参考：其他部署模式
 
 [English](deployment.md) · [简体中文](deployment.zh-CN.md)
 
 本项目的主要在线形态请先阅读[部署自己的在线 Site](sites-deployment.zh-CN.md)，其中明确了 Sites 专用入口、完整表结构、所有者身份和私有部署产物。下文是可选替代运行模式；通用 Worker 不能替代完整的私有 Sites 适配器。
 
-## 选择运行模式
+## 可选模式，不是在线 Site 的安装步骤
 
 | 模式 | 要求 | 能力 |
 | --- | --- | --- |
 | 本地快照 | Node.js 24+ 与导出快照 | 在本机环回地址展示观察记录 |
 | 合成示例 | Node.js 24+ | 虚构项目、临时 SQLite 回执与队列状态检查，不执行真实任务 |
 | 认证需求通道 | 持久化存储、项目注册表与已验证身份 | 保存需求，以及带版本的已读、推进回执 |
-| Worker 与 D1 | 单独配置的 Worker 宿主和 `DB` 绑定 | 运行相同看板，可选择持久化需求 |
+| 通用 Worker 与 D1 | 单独配置的 Worker 宿主、认证和 `DB` 绑定 | 快照界面与可选持久化需求；不包含 Sites 专用手动状态和观察服务 |
 | 队列 / Events 实验 | 明确启用，并提供所需存储和宿主接入 | 记录排队意图，或通过注入的传输实现投递事件 |
 
-运行、测试和构建本仓库都不需要安装 npm 依赖。托管平台 CLI 与账号配置属于单独步骤。交给 Agent 安装时，可参考 [INSTALL.zh-CN.md](../INSTALL.zh-CN.md)。
+运行、测试和构建本仓库都不需要安装 npm 依赖。托管平台 CLI 与账号配置属于单独步骤。本机开发安装见 [INSTALL.zh-CN.md](../INSTALL.zh-CN.md)；在线产品按 [Sites 安装步骤](sites-deployment.zh-CN.md)操作。
 
 ## 本地快照服务
 
@@ -52,12 +52,19 @@ node --check dist/server/index.js
 
 ## 可选 D1 存储
 
-持久化需求的 Worker 需要将兼容 D1 的数据库绑定为 `DB`。对本次安装选定的数据库应用仓库中的 SQL：
+通用 Worker 使用完整普通 SQL 结构时，需要将兼容 D1 的数据库绑定为 `DB`。对新数据库按顺序应用全部 `migrations/` 迁移，前两条不是当前完整结构：
 
-1. [0000_project_intake.sql](../migrations/0000_project_intake.sql) 创建需求和回执事件存储
-2. [0001_events_dispatch.sql](../migrations/0001_events_dispatch.sql) 添加实验性队列和 Events 存储
+1. `0000_project_intake.sql`
+2. `0001_events_dispatch.sql`
+3. `0002_execution_evidence.sql`
+4. `0003_dispatch_guards.sql`
+5. `0004_native_dispatch_journal.sql`
+6. `0005_board_observations.sql`
+7. `0006_board_observation_outbox.sql`
+8. `0007_dispatch_manual_authorizations.sql`
+9. `0008_manual_task_status.sql`
 
-这些功能还需要完整普通 SQL/本地链中的 `0002_execution_evidence.sql`、`0003_dispatch_guards.sql`、`0004_native_dispatch_journal.sql`、`0005_board_observations.sql`、`0006_board_observation_outbox.sql`、`0007_dispatch_manual_authorizations.sql`、`0008_manual_task_status.sql`。Sites 应使用[在线指南](sites-deployment.zh-CN.md)中的独立完整 Drizzle 链，不能将两条链重复应用到同一数据库。
+完整表结构不代表所有宿主专用功能都会启用。**Sites 部署只使用[在线指南](sites-deployment.zh-CN.md)的完整 Drizzle 链，不按本节操作。** 两条链不能重复应用到同一数据库。本机受管理安装会自行应用普通 SQL 迁移，不要手工重复执行。
 
 使用宿主官方支持的迁移工具，确认实际修改的数据库，升级前备份已有数据。仓库已经包含普通 SQL，运行时不需要模式生成器。缺少表会关闭对应能力；不能仅凭健康检查就宣称需求通道已经可用。
 
@@ -65,7 +72,7 @@ node --check dist/server/index.js
 
 ## 运行时配置
 
-以下布尔开关仅在字符串严格等于 `true` 时生效；可选开关缺省保持关闭。
+此表描述通用适配器，不是 Sites 的另一套配置清单。以下布尔开关仅在字符串严格等于 `true` 时生效；可选开关缺省保持关闭。当前私有 Sites 入口会强制关闭直接 Events 投递，修改开关也不会启用，详见[当前接入范围](integrations.zh-CN.md)。
 
 | 变量 | 用途 |
 | --- | --- |
@@ -92,6 +99,16 @@ Worker 不提供登录系统，也不会自动验证任意传入的身份头。�
 
 ## 刷新、事件与验证
 
-刷新会重读已有记录，不更新观察时间。导出或轮询服务需要单独配置。Events 还需要获准的、固定解析地址的传输实现，以及明确配置的定时处理。本仓库不附带 Cloudflare 回调适配器或原生任务调度器。
+刷新会重读已有记录，不更新观察时间。导出或轮询服务需要单独配置。通用宿主实验的 Events 还需要获准的传输契约与单独配置的定时处理，见[两种传输契约](integrations.zh-CN.md)。仓库包含候选传输源码，但没有已配置、已验收的生产回调连接或原生执行调度器。标准私有 Sites 入口保持直接 Events 和定时处理关闭。
 
 接入私有记录前，应使用合成数据验证未登录访问被拒绝、用户隔离、保存与重试、读取与事件写入，以及所选宿主的实际行为。390 像素预览框是布局检查，不是真实手机测试。真实设备和线上接入须分别验收后才能宣称通过。平台限制和费用取决于账号与配置，本项目不承诺免费托管或特定吞吐量。
+
+## 开发者构建入口
+
+| 命令 | 产物 | 范围 |
+| --- | --- | --- |
+| `npm run build:sites` | `dist/sites/index.js` | 当前所有者私有 Sites 适配器：手动状态、观察、任务控制及只读任务检查 |
+| `npm run build` | `dist/server/index.js` | 通用 Worker；需另行接入可信身份，不注入 Sites 专用服务 |
+| `npm run build:candidate` | `dist/candidate/index.js` | 实验性认证/回调开发入口；不属于标准 Site 安装，也不是已经验收的自动执行版本 |
+
+各产物互不覆盖。在线打包命令选择 Sites 构建并放到宿主要求的路径，按[在线指南](sites-deployment.zh-CN.md)操作即可。通用 Worker 与本机模式在没有相应可信宿主服务时，不提供手动状态编辑。

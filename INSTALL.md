@@ -1,4 +1,4 @@
-# Install and verify
+# Optional local installation for developers
 
 [English](INSTALL.md) · [简体中文](INSTALL.zh-CN.md)
 
@@ -23,9 +23,7 @@ If the runtime is missing, use the environment's approved installation method. D
 
 ## 2. Get the selected version
 
-For a supplied portable ZIP, verify its SHA-256 against the accompanying release manifest, extract it into a new directory, and open the directory containing `package.json`. No `npm install` is required. Record the archive digest as well as the package version: prerelease source revisions can share a version number. Use the extracted source for every check and install command below.
-
-For Git installation, use the commands below. The repository's default branch may differ from a supplied prerelease archive; do not substitute one for the other or assume the archive has already been published.
+For the optional developer installation, get the selected Git revision:
 
 ```sh
 git clone https://github.com/KimYx0207/dot-task-board.git
@@ -35,19 +33,18 @@ git rev-parse HEAD
 node -p "JSON.parse(require('node:fs').readFileSync('package.json','utf8')).version"
 ```
 
-Compare the origin, commit and package version with the release the user selected. A repository URL alone does not promise that a future release is already present. If the requested version is unavailable, report that fact rather than relabeling the installed version.
+Record the origin, commit and package version. If the user instead supplies a ZIP, verify its SHA-256 against its accompanying manifest, extract it into a new directory and use that exact source consistently. A prerelease version number alone does not identify identical files; do not mix a ZIP with a newer checkout.
 
 Read the local scripts, then run the applicable checks:
 
 ```sh
 npm run check
 npm run check:public
-npm run build
 npm test
 node --check dist/server/index.js
 ```
 
-Record checks that passed, failed or were not run. Do not continue past a failure by disabling authentication, input validation or publication checks.
+`npm test` first builds all three targets through its `pretest` script; a separate build command is not needed for this check sequence. Record checks that passed, failed or were not run. Do not continue past a failure by disabling authentication, input validation or publication checks.
 
 ## 3. Install and start the local app
 
@@ -116,7 +113,7 @@ node scripts/manage.mjs start --dir "/absolute/path/outside-checkout/dot-board-l
 
 This mode stores requests locally and exposes local MCP under the same loopback owner. It does not connect a hosted plugin, schedule polling or execute native workers. Queue support stays off unless explicitly selected with `--queue`; Events remains off. The persistent local app rereads the external snapshot for board/API requests without changing its source observation times. Project registry files are loaded at startup; restart to load registry changes.
 
-For snapshot display only, without a local request database, the original command remains available:
+For the currently supported snapshot-only developer mode, without a local request database:
 
 ```sh
 DOT_BOARD_SNAPSHOT_PATH=/absolute/path/outside-repo/snapshot.json npm start
@@ -141,12 +138,10 @@ node scripts/manage.mjs rollback --dir "/absolute/path/outside-checkout/dot-boar
 
 It does not restore or downgrade the database. Startup rejects a database without a migration ledger, with unknown/newer migration entries, or with changed previously applied migrations. Later migrations create local backup files before application, but these do not replace a reviewed upgrade/restore plan. Check storage compatibility before starting the older code. Do not delete the previous checkout or backup until the new version is accepted. Re-running setup must not overwrite private data, duplicate a running service or create a second external task.
 
-## Installation report
+## Local installation report
 
 Return the installed commit/version, runtime, source/runtime locations, exact start/stop instructions, verified local URL, check results and any blocker. Distinguish snapshot display, local request persistence, authenticated MCP, hosted deployment and real execution. Only call the integrations actually verified connected.
 
-## Build targets and manual status
+## Hosted builds are separate
 
-`npm run build` produces the portable public Worker at `dist/server/index.js`; `npm run build:sites` produces the owner-private host adapter at `dist/sites/index.js`; `npm run build:candidate` produces `dist/candidate/index.js`. The outputs do not overwrite each other. The Sites adapter still requires trusted ingress, owner and audience enforcement.
-
-Plain Worker and loopback/local installs do not provide a trusted manual-status service. They show task status read-only and reject manual-status writes. Quick edits and notes are enabled only when the host supplies the authenticated service. Request intake and queue records do not prove live native execution or automatic continuation.
+For the requested online product, follow [Online Sites deployment](docs/sites-deployment.md). The local modes above do not provide owner-manual status editing or a hosted account connection. Build-target differences and optional alternative hosts are documented in [Deployment](docs/deployment.md); do not apply the local steps as an extra requirement for Site users.

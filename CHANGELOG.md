@@ -4,13 +4,21 @@
 
 ## 0.2.0-rc.1 — 2026-10-09 (source prerelease)
 
+### Reader-focused setup documentation
+
+- Keep the README focused on what the board does, a complete request to give your own dot, account requirements and the four public author links.
+- Keep runtime commands, hosting internals, identity configuration and schema details in the existing installation/deployment/developer guides.
+- Correct outdated integration instructions: use complete host-specific migrations, supply snapshot JSON contents, distinguish the current Sites Events boundary and document existing-thread/manual-authorization behavior accurately.
+- Remove duplicate setup/build instructions. Keep still-supported developer options clearly separate from the current Site path.
+- Preserve the prerelease, unverified first-time deployment and automatic-execution boundaries. No application or Site behavior changes.
+
 ### Online Site deployment handoff
 
 - Make “give the repository to your own dot, then receive your own private Site URL” the primary installation flow; local preview is optional.
 - Preserve the four public author header entries: aiking.dev, X, GitHub and WeChat Official Account.
 - Document the actual Sites-only entry, platform access, Site-specific owner ID, full D1 schema and private runtime configuration. A generic Worker is not the equivalent private Site.
 - Add `package:sites` to stage the private bundle and all 19 required deployment files without deploying or embedding runtime data. Add three packaging regression tests.
-- Latest source validation: 224 files and 652 passing tests; the compiled-boundary suite remains 18 tests. A separate user's first real Sites deployment and browser/real-device acceptance remain unverified.
+- Validation of that source revision: 224 files and 652 passing tests; the compiled-boundary suite had 18 tests. A separate user's first real Sites deployment and browser/real-device acceptance remain unverified.
 
 ### 2026-10-09 — portable manual-status display consistency
 
@@ -19,7 +27,7 @@
 - Include the shared display module in local, public Worker, candidate and owner-private Sites assets.
 - Retain separate public and owner-private build outputs and read-only manual-status fallback when no trusted host service is configured.
 
-Validation: Node.js 24.19.0; 224 source files; 652/652 tests passed with zero skips in the integrated source and clean archive. All three builds, compiled syntax, synthetic owner-private observation checks, managed local installation, request persistence, idempotent retries and stop/restart passed. No dependency installation is required.
+Historical validation for the earlier portable revision: Node.js 24.19.0; 219 source files; 649/649 tests passed with zero skips in the integrated source and clean archive. All three builds, compiled syntax, synthetic owner-private observation checks, managed local installation, request persistence, idempotent retries and stop/restart passed. No dependency installation is required.
 
 This is still a prerelease. Browser visual and real-device acceptance were not completed because of the available preview environment. Live plugin connection, native automatic execution, automatic continuation and real external callback delivery remain unverified.
 
@@ -37,6 +45,8 @@ This is still a prerelease. Browser visual and real-device acceptance were not c
 
 These are presentation and existing manual-status improvements. They do not start native workers, reopen paused/canceled execution, or establish end-to-end automatic continuation.
 
+
+### Earlier 0.2 development work
 
 - Make projects the main navigation and show project tasks and associated Agents on one canvas.
 - Add task/Agent filters, search, detail panels and six generated portraits with stable-ID visual fallback.
