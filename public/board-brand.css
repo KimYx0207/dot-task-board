@@ -1,0 +1,54 @@
+/* Decorative team artwork stays in normal flow and never covers board controls. */
+.board-mascots{width:120px;max-width:100%;margin:0;pointer-events:none;user-select:none;flex:0 0 120px}
+.board-mascots img{display:block;width:100%;height:auto;aspect-ratio:3/1;object-fit:contain}
+.brand-links{display:flex;align-items:center;gap:4px}
+.brand-link{display:flex;align-items:center;justify-content:center;width:44px;height:44px;min-width:44px;min-height:44px;padding:10px;color:var(--ink);border-radius:7px;text-decoration:none;cursor:pointer;list-style:none;transition:background .18s}
+.brand-link:hover,.wechat-entry[open]>.brand-link{background:var(--accent-soft)}
+.brand-link svg{display:block;width:22px;height:22px;flex:none}
+.wechat-link svg{width:24px;height:24px}
+.brand-link::-webkit-details-marker{display:none}
+.wechat-entry{position:relative}
+.wechat-link{color:#328850}
+.wechat-card{position:absolute;z-index:25;top:calc(100% + 10px);right:0;width:272px;max-width:calc(100vw - 32px);padding:18px;background:var(--surface);border:1px solid var(--line);border-radius:10px;box-shadow:0 12px 38px #25312620;color:var(--ink);font-size:14px}
+.wechat-card label{display:block;font-weight:600;margin-bottom:10px}
+.wechat-card input{display:block;width:100%;font-size:16px;font-weight:550;cursor:text;background:var(--surface-soft)}
+.wechat-card button{width:100%;margin-top:10px;min-height:44px}
+.wechat-card p{font-size:12px;color:var(--muted);margin-top:10px;line-height:1.6}
+@media(max-width:1100px){.page-heading{grid-template-columns:minmax(0,1fr) auto}.board-mascots{width:114px;flex-basis:114px}}
+@media(max-width:800px){.board-mascots{width:96px;flex-basis:96px}.topbar-meta{gap:12px}.brand-links{gap:0}.read-only{display:none}}
+@media(max-width:520px){.board-mascots{width:90px;flex-basis:90px}.topbar-meta{gap:7px}.topbar{gap:8px}.brand-link{padding:12px}.private{font-size:11px;gap:4px}.wechat-card{right:-78px}}
+@media(max-width:360px){.topbar{padding-inline:12px}.topbar-meta{gap:2px}.brand{gap:6px}.brand-link{width:44px;min-width:44px}.private{font-size:0}.private svg{width:12px}.wechat-card{right:-18px}}
+@media(prefers-reduced-motion:reduce){.brand-link{transition:none}}
+
+/* The page heading stays compact; team artwork belongs to the top navigation brand. */
+.page-heading{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:16px;margin-bottom:14px}
+.page-heading .heading-main{display:flex;align-items:center;justify-content:flex-start;gap:14px;min-width:0;width:auto;margin:0}
+.page-heading h1{font-size:34px;line-height:1.2;letter-spacing:-.8px;white-space:normal;overflow-wrap:anywhere}
+.page-heading .heading-actions{display:flex;gap:8px;align-items:center;margin:0;min-width:0}
+.page-heading #refresh{margin:0}
+.search-inline{display:flex;align-items:center;gap:4px;margin-left:auto;min-width:200px;flex:1;max-width:340px}
+.search-inline input{width:100%;min-width:0;height:44px;font-size:14px;background:var(--surface)}
+.search-inline button{min-height:44px;padding-inline:10px;font-size:12px;white-space:nowrap}
+.inbox-banner:has(.inbox-empty):not(:has(.inbox-error)){display:flex;align-items:center;gap:14px;min-height:42px;padding:3px 0;margin-bottom:10px;background:transparent;border:0;border-radius:0}
+.inbox-banner:has(.inbox-empty):not(:has(.inbox-error)) .inbox-heading{display:contents}
+.inbox-banner:has(.inbox-empty):not(:has(.inbox-error)) h2{font-size:12px;font-weight:500;color:var(--muted)}
+.inbox-banner:has(.inbox-empty):not(:has(.inbox-error)) .inbox-empty{margin:0;font-size:12px}
+.inbox-banner:has(.inbox-empty):not(:has(.inbox-error)) .inbox-heading button{order:3;margin-left:auto;min-height:40px}
+.request-panel.is-inline{margin:0 0 18px;padding:18px 20px;border:1px solid var(--line);border-radius:10px;background:var(--surface)}
+.request-panel.is-inline>summary{display:none}
+.request-panel.is-inline .request-workspace{padding:0}
+.request-panel.is-inline .request-heading-row{margin-bottom:16px}
+.request-panel.is-inline .request-heading-row>div{flex:1}
+#close-request{min-height:44px}
+@media(max-width:1100px){.page-heading{grid-template-columns:minmax(0,1fr) auto}.page-heading h1{font-size:31px}}
+@media(max-width:800px){.page-heading{grid-template-columns:minmax(0,1fr);gap:10px 12px}.page-heading h1{font-size:30px}.page-heading .heading-main{grid-column:1;grid-row:1;gap:10px}.page-heading .heading-actions{grid-column:1/-1;grid-row:2;width:100%;justify-content:flex-start}.page-heading #refresh{font-size:12px;min-height:44px;padding:8px}.page-heading #refresh span{font-size:16px}.page-heading .primary-action{min-height:44px}.search-inline{max-width:none;min-width:180px;order:3;flex-basis:100%;margin:2px 0 0}.inbox-banner:has(.inbox-empty):not(:has(.inbox-error)){gap:6px 10px;flex-wrap:wrap}.inbox-banner:has(.inbox-empty):not(:has(.inbox-error)) .inbox-empty{flex:1;min-width:130px}.request-panel.is-inline{padding:16px}.request-heading-row{gap:8px}}
+@media(max-width:520px){.page-heading{grid-template-columns:minmax(0,1fr)}.page-heading h1{font-size:28px}.page-heading .heading-actions{gap:10px}.view-toolbar{gap:8px}.request-panel.is-inline .request-heading-row>div{flex-basis:100%}}
+
+/* Optical icon normalization keeps four equal hit targets and centers their glyphs. */
+.topbar-brand-group{display:flex;align-items:center;gap:14px;min-width:0}
+.topbar-brand-group .brand{flex:none}
+.topbar .board-mascots{width:120px;flex:0 0 120px;margin:0}
+.topbar .brand-link{padding:10px}
+@media(max-width:900px){.topbar-brand-group{gap:10px}.topbar .board-mascots{width:96px;flex-basis:96px}.topbar-meta{gap:8px}.read-only{display:none}}
+@media(max-width:520px){.topbar{padding-inline:12px;gap:4px}.topbar-brand-group{gap:6px}.topbar .brand{font-size:22px;gap:6px}.topbar .board-mascots{width:80px;flex-basis:80px}.topbar-meta{gap:2px}.topbar .private{font-size:0;gap:0}.topbar .private svg{width:12px;flex:none}.wechat-card{right:-14px}}
+@media(max-width:360px){.topbar .brand{min-width:44px;min-height:44px;justify-content:center}.topbar .brand span:not(.project-ring){display:none}.topbar .board-mascots{width:48px;flex-basis:48px}.topbar .private{display:none}.wechat-card{right:0}}

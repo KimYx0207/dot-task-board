@@ -1,0 +1,92 @@
+/* Projects stay in document flow; task, status and Agent columns share one grid. */
+.project-overview{color:var(--ink);min-width:0}
+.po-dashboard{display:flex;align-items:center;flex-wrap:wrap;gap:12px 28px;padding:18px 0 22px}
+.po-metric{display:flex;align-items:baseline;gap:7px;min-width:0}
+.po-metric strong{font-size:20px;line-height:1.3;font-weight:600;letter-spacing:-.6px}
+.po-metric>span{font-size:12px;color:var(--muted)}
+.po-metric:last-child{margin-left:auto}
+.po-metric:last-child strong{font-size:14px;letter-spacing:0}
+.po-viewport{min-width:0}
+.po-zone{border:1px solid var(--line);border-radius:10px;background:var(--surface);margin-bottom:20px;overflow:hidden}
+.po-zone-header{display:flex;align-items:center;justify-content:space-between;gap:20px;padding:20px 22px 16px}
+.po-project-identity{min-width:0}
+.po-zone-title{display:block;border:0;border-radius:3px;background:transparent;min-height:0;padding:0;text-align:left;font-size:17px;line-height:1.4;font-weight:600;letter-spacing:-.25px;overflow-wrap:anywhere;color:var(--ink)}
+button.po-zone-title:hover{color:var(--accent);background:transparent}
+.po-zone-meta{color:var(--muted);font-size:12px;margin-top:5px}
+.po-project-freshness{font-size:12px;color:var(--muted);flex-shrink:0}
+.po-project-accounting{display:grid;gap:6px;padding:0 22px 16px;color:var(--muted);font-size:12px;line-height:1.7}
+.po-accounting-current{color:var(--ink)}
+.po-scope-changes summary{cursor:pointer;width:fit-content;min-height:24px;color:var(--muted)}
+.po-scope-changes[open]{padding-top:4px}
+.po-scope-changes p{margin-top:5px;max-width:80ch}
+.po-columns,.po-task-row{display:grid;grid-template-columns:minmax(0,1.65fr) minmax(100px,.55fr) minmax(180px,1fr);column-gap:24px;align-items:center;padding:0 22px}
+.po-columns{background:var(--surface-soft);border-block:1px solid var(--line);min-height:36px;color:var(--muted);font-size:12px}
+.po-task-row{min-height:88px;border-bottom:1px solid var(--line)}
+.po-task-row:last-child{border-bottom:0}
+.po-task-row:hover{background:var(--surface-soft)}
+.po-task{display:flex;min-width:0;width:100%;align-self:stretch;justify-content:center;flex-direction:column;gap:7px;text-align:left;border:0;border-radius:0;background:transparent;padding:18px 0;color:var(--ink)}
+.po-task:hover{background:transparent}
+.po-task-title{display:block;font-size:14px;font-weight:500;line-height:1.5;overflow-wrap:anywhere}
+.po-task-progress,.po-task-blocker{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;font-size:12px;font-weight:400;line-height:1.6;color:var(--muted);overflow-wrap:anywhere}
+.po-task-blocker{color:var(--warning)}
+.po-task-state{display:flex;flex-direction:column;align-items:flex-start;gap:6px;padding:12px 0}
+.po-task-status{font-size:12px;color:var(--muted);display:inline-flex;align-items:center;gap:6px;line-height:1.5}
+.po-task-status::before{content:"";width:6px;height:6px;border-radius:50%;background:#aaaead;flex-shrink:0}
+.po-task-status[data-state=running]{color:var(--accent)}
+.po-task-status[data-state=running]::before{background:var(--accent)}
+.po-task-status[data-state=completed]{color:var(--success)}
+.po-task-status[data-state=completed]::before{background:var(--success)}
+.po-task-status[data-state=blocked],.po-task-status[data-state=waiting]{color:var(--warning)}
+.po-task-status[data-state=blocked]::before,.po-task-status[data-state=waiting]::before{background:var(--warning)}
+.po-task-freshness,.po-task-evidence{font-size:12px;color:var(--muted);line-height:1.4}
+.po-task-agents{display:flex;flex-wrap:wrap;gap:6px 10px;padding:12px 0;min-width:0}
+.po-agent,.po-unassigned-agent{display:flex;align-items:center;gap:8px;min-height:44px;min-width:0;max-width:100%;padding:4px 6px 4px 0;border:0;border-radius:6px;background:transparent;text-align:left}
+.po-agent:hover,.po-unassigned-agent:hover{background:var(--accent-soft)}
+.po-portrait.role-portrait{width:32px;height:32px}
+.po-agent-copy{display:flex;flex-direction:column;gap:2px;min-width:0}
+.po-agent-copy strong{font-size:12px;font-weight:500;line-height:1.5;max-width:24ch;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.po-agent-status{font-size:12px;line-height:1.5;color:var(--muted)}
+.po-agent-missing{font-size:12px;color:var(--muted)}
+.po-project-support{display:flex;align-items:center;flex-wrap:wrap;gap:8px 20px;border-top:1px solid var(--line);padding:12px 22px}
+.po-support-label{font-size:12px;color:var(--muted)}
+.po-project-agents{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:10px 24px;border-top:1px solid var(--line);padding:16px 22px}
+.po-project-agents .po-portrait{width:44px;height:44px}
+.po-project-agents .po-agent-copy strong{font-size:14px}
+.po-project-agents .po-agent-status{font-size:12px}
+.po-zone-empty{padding:22px;color:var(--muted);font-size:13px;border-top:1px solid var(--line)}
+.po-zone-empty span{display:block;font-size:12px;margin-top:5px}
+.po-project-agents .po-zone-empty{border:0;padding:0}
+.po-secondary{display:flex;align-items:flex-start;flex-wrap:wrap;gap:10px 24px;margin-top:4px;padding-bottom:8px}
+.po-help,.po-deliveries{font-size:12px;color:var(--muted);min-width:0}
+.po-help summary,.po-deliveries summary{cursor:pointer;min-height:32px;line-height:32px}
+.po-help p,.po-deliveries p{max-width:70ch;line-height:1.7;margin-top:8px}
+.po-deliveries button{display:block;max-width:100%;text-align:left;margin:6px 0;font-size:12px;min-height:36px}
+.po-unassigned{margin:4px 0 16px;padding:12px 0;border-bottom:1px solid var(--line)}
+.po-unassigned summary{cursor:pointer;font-size:13px;color:var(--ink);min-height:32px;line-height:32px}
+.po-unassigned>p{font-size:12px;color:var(--muted);line-height:1.6;margin-top:8px;max-width:70ch}
+.po-unassigned-roster{display:flex;gap:10px 24px;flex-wrap:wrap;margin-top:12px}
+.po-empty{min-height:230px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:40px 24px;border:1px solid var(--line);border-radius:10px;background:var(--surface);margin-bottom:16px}
+.po-empty-mark{width:26px;height:26px;border:8px solid #bac1d3;border-radius:50%;margin-bottom:16px}
+.po-empty h2{font-size:17px;font-weight:500;line-height:1.5}
+.po-empty p{font-size:13px;line-height:1.8;max-width:43ch;color:var(--muted);margin-top:8px}
+.project-overview[data-content-type=tasks] .po-columns,.project-overview[data-content-type=tasks] .po-task-row{grid-template-columns:minmax(0,1fr) 150px}
+@media(max-width:1100px){.po-columns,.po-task-row{grid-template-columns:minmax(0,1.3fr) 98px minmax(130px,1fr);column-gap:16px}.po-zone-header{gap:12px}.po-project-freshness{max-width:12ch;text-align:right}.po-agent-copy strong{max-width:16ch}}
+@media(max-width:620px){
+ .po-dashboard{gap:10px 20px;padding:16px 0 18px}.po-metric strong{font-size:18px}.po-metric:last-child{gap:5px}.po-metric:last-child strong{font-size:12px}.po-metric>span{font-size:12px}
+ .po-zone{border-radius:8px;margin-bottom:16px}.po-zone-header{padding:16px 16px 14px;align-items:flex-start}.po-zone-title{font-size:16px}.po-zone-meta{font-size:12px}.po-project-freshness{font-size:12px}
+ .po-project-accounting{padding:0 16px 14px;gap:5px}.po-accounting-totals{font-size:12px}.po-scope-changes summary{font-size:12px}
+ .po-columns{display:none}.po-task-row{grid-template-columns:minmax(0,1fr) auto;column-gap:12px;padding:0 16px;min-height:0;border-top:1px solid var(--line);border-bottom:0;align-items:start}.po-task{padding:16px 0 12px;gap:5px}.po-task-title{font-size:14px}.po-task-state{padding-top:18px;max-width:100px;align-items:flex-end}.po-task-status{font-size:12px}.po-task-freshness,.po-task-evidence{font-size:12px}.po-task-agents{grid-column:1/-1;border-top:1px solid var(--line);padding:7px 0;gap:4px 16px}.po-agent-copy strong{max-width:20ch}.po-portrait.role-portrait{width:28px;height:28px}.po-agent-status{display:block}.po-agent{min-height:44px}.po-agent-missing{font-size:12px;line-height:28px}.po-task-progress,.po-task-blocker{font-size:12px}
+ .po-project-support{padding:10px 16px;gap:6px 14px}.po-project-agents{padding:12px 16px;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.po-project-agents .po-portrait{width:32px;height:32px}.po-project-agents .po-agent-copy strong{font-size:12px}.po-project-agents .po-agent-status{display:block;font-size:12px}.po-zone-empty{padding:20px 16px}.po-empty{min-height:220px;padding:32px 20px}.po-empty p{max-width:28ch}.po-secondary{gap:6px 20px}.po-unassigned-roster{gap:8px 16px}.po-unassigned-agent .po-agent-status{display:block}
+ .project-overview[data-content-type=tasks] .po-task-row{grid-template-columns:minmax(0,1fr) auto}
+}
+
+button.po-task-evidence{min-height:24px;border:0;border-radius:3px;padding:0;background:transparent;text-align:left;text-decoration:underline;text-underline-offset:3px}button.po-task-evidence:hover{color:var(--accent)}
+/* Supplementary records retain full context without competing with the queue. */
+.project-overview[data-supplementary=true] .po-dashboard{display:none}
+.project-overview[data-supplementary=true] .po-zone{margin-top:16px;border-radius:8px}
+.project-overview[data-supplementary=true] .po-zone-header{padding:18px 20px 13px}
+.project-overview[data-supplementary=true] .po-zone-title{font-size:16px}
+.project-overview[data-supplementary=true] .po-project-accounting{padding-inline:20px}
+.project-overview[data-supplementary=true] .po-zone-empty{font-size:12px;padding:17px 20px}
+.project-overview[data-supplementary=true] .po-empty{margin-top:16px;min-height:180px}
+@media(max-width:520px){.project-overview[data-supplementary=true] .po-zone-header{padding:16px}.project-overview[data-supplementary=true] .po-project-accounting{padding-inline:16px}.project-overview[data-supplementary=true] .po-zone-empty{padding:16px}}

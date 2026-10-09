@@ -1,0 +1,15 @@
+{
+  "name": "dot-board-free-worker-candidate",
+  "main": "../dist/candidate/index.js",
+  "compatibility_date": "2026-10-08",
+  "compatibility_flags": ["global_fetch_strictly_public"],
+  "workers_dev": false,
+  "preview_urls": false,
+  "vars": {
+    "DOT_BOARD_CANDIDATE_ENABLED": "false",
+    "DOT_BOARD_EVENTS_ENABLED": "false",
+    "DOT_BOARD_QUEUE_ENABLED": "false",
+    "DOT_BOARD_INTAKE_ENABLED": "false",
+    "DOT_BOARD_INTAKE_MCP_ENABLED": "false"
+  }
+}

@@ -4,7 +4,7 @@ export function normalizeAgents(input,tasks,config,{safeText,timestamp,safeLink,
   if (!Array.isArray(input) || input.length > (config.maxAgents ?? 100)) throw new SnapshotError('invalid_agents');
   const record=v=>v&&typeof v==='object'&&!Array.isArray(v);
   const ids=new Set(),taskIds=new Set(tasks.map(t=>t.id));
-  const identifier=value=>typeof value==='string'&&/^[A-Za-z0-9_.:-]{1,100}$/.test(value)?value:null;
+  const identifier=value=>typeof value==='string'&&/^[A-Za-z0-9_.:-]{1,100}$/.test(value)&&safeText(value,100)===value?value:null;
   const list=(value,max=100)=>Array.isArray(value)?value.slice(0,max):[];
   const agents=input.map(raw=>{
     if (!record(raw)) throw new SnapshotError('invalid_agent');

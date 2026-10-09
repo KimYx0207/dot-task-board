@@ -1,0 +1,22 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+import {buildBoard} from '../src/application/board-service.mjs';
+import {boardConfig} from '../config/board.mjs';
+import {taskDisplayProjection} from '../public/task-display.js';
+import {taskClarity,clarityBoard} from '../public/project-clarity.js';
+const now=Date.parse('2026-10-09T04:00:00Z');
+const source=()=>JSON.parse(readFileSync(new URL('../fixtures/synthetic.json',import.meta.url),'utf8'));
+const manual=state=>({source:'owner_manual',version:1,state,updatedAt:'2026-10-08T16:28:52.510Z',reason:'Owner finished collection; analysis is separate.'});
+test('manual completed has independent display counts and order while raw evidence and counts stay unchanged',()=>{
+ const s=source(),t=s.tasks[0];t.state='blocked';t.observedAt='2026-10-01T00:00:00Z';t.blocker='Old collection blocker';t.nextAction='Retry collection';t.manualStatus=manual('completed');
+ s.tasks.push({...t,id:'pending-peer',title:'Pending peer',manualStatus:undefined});const before=structuredClone(s),b=buildBoard(s,boardConfig,now),out=b.tasks.find(x=>x.id===t.id),c=taskClarity(out,b,null,now);
+ assert.equal(out.state,'blocked');assert.equal(out.stateView.label,'受阻');assert.equal(out.displayState,'completed');assert.equal(out.displayStateView.label,'已完成');assert.equal(b.counts.completed,0);assert.equal(b.displayCounts.completed,1);assert(b.tasks.findIndex(x=>x.id==='pending-peer')<b.tasks.findIndex(x=>x.id===t.id));
+ assert.equal(c.status,'已完成');assert.equal(c.freshness,'old');assert.equal(c.blocker,'');assert.equal(c.next,t.manualStatus.reason);assert.deepEqual(c.history,{blocker:t.blocker,next:t.nextAction});assert.equal(c.executionState,null);
+ assert.deepEqual(out.verification,buildBoard({...s,tasks:s.tasks.map(x=>({...x,manualStatus:undefined}))},boardConfig,now).tasks.find(x=>x.id===t.id).verification);
+ assert.deepEqual(s,before);assert.deepEqual(b.agents,buildBoard({...s,tasks:s.tasks.map(x=>({...x,manualStatus:undefined}))},boardConfig,now).agents);
+ const projected=clarityBoard(b);assert.equal(projected.displayCounts.completed,1);assert.equal(out.state,'blocked');
+});
+for(const state of ['paused','canceled'])test(`observed ${state} remains stronger than manual completed`,()=>{const t={state,manualStatus:manual('completed')},d=taskDisplayProjection(t,boardConfig.states);assert.equal(d.displayState,state);assert.equal(d.manualCompleted,false);assert.equal(taskClarity(t,{},null,now).history,null);});
+for(const state of ['paused','canceled'])test(`manual ${state} changes presentation only`,()=>{const t={state:'blocked',manualStatus:manual(state)},before=structuredClone(t),c=taskClarity(t,{},null,now);assert.equal(c.displayState,state);assert.equal(c.stopped,true);assert.equal(c.executionState,null);assert.deepEqual(t,before);});
+test('absent or untrusted manual status preserves historical observations',()=>{for(const m of [undefined,{...manual('completed'),source:'model_guess'},{...manual('completed'),version:0}]){const t={state:'blocked',blocker:'Old blocker',nextAction:'Read original evidence',observedAt:'2026-10-01T00:00:00Z',manualStatus:m},c=taskClarity(t,{},null,now);assert.equal(c.displayState,'blocked');assert.equal(c.blocker,t.blocker);assert.equal(c.next,t.nextAction);assert.equal(c.freshness,'old');assert.equal(c.history,null);}});

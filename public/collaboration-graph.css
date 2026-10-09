@@ -1,0 +1,2 @@
+/* Shared role portraits. Canvas layout lives in project-overview.css. */
+.role-portrait{display:block;flex-shrink:0;background-repeat:no-repeat;width:96px;height:96px;border:0;border-radius:0;background-color:transparent}.agent-avatar.role-portrait{width:64px;height:64px}.portrait-pending{display:grid;place-items:center;font-size:var(--font-meta);line-height:1.4;color:var(--muted);border:1px dashed var(--line)}

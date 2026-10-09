@@ -1,0 +1,10 @@
+import test from 'node:test';import assert from 'node:assert/strict';import {readFileSync} from 'node:fs';
+import {applySitesVisibility} from '../src/adapters/sites-visibility.mjs';import {createSitesPrivateEntry} from '../src/application/sites-entry.mjs';
+const original=JSON.parse(readFileSync(new URL('../fixtures/synthetic.json',import.meta.url),'utf8'));
+test('private project removal filters task, agent relationships, board counts and request choices without changing input',async()=>{
+ const snapshot=structuredClone(original),project=snapshot.tasks[0].project,names=[...new Set(snapshot.tasks.map(t=>t.project))],registry=names.map((name,i)=>({id:'p'+i,name,aliases:[],executionState:'deferred'})),hiddenId=registry.find(p=>p.name===project).id;
+ const env={DOT_BOARD_SNAPSHOT:JSON.stringify(snapshot),DOT_BOARD_PROJECT_REGISTRY:JSON.stringify(registry),DOT_BOARD_HIDDEN_PROJECT_IDS:JSON.stringify([hiddenId]),DOT_BOARD_INGRESS:'sites-owner-private-v1',DOT_BOARD_OWNER_ID:'synthetic-owner',DOT_BOARD_AUDIENCE:'https://example.com'};
+ const filtered=applySitesVisibility(env);assert.equal(JSON.parse(env.DOT_BOARD_SNAPSHOT).tasks.length,snapshot.tasks.length);assert(!JSON.parse(filtered.DOT_BOARD_PROJECT_REGISTRY).some(p=>p.id===hiddenId));assert(!JSON.parse(filtered.DOT_BOARD_SNAPSHOT).tasks.some(t=>t.project===project));assert(!JSON.parse(filtered.DOT_BOARD_SNAPSHOT).agents.some(a=>a.projectNames.includes(project)));
+ const board=await(await createSitesPrivateEntry().fetch(new Request('https://example.com/api/board',{headers:{'oai-authenticated-user-id':'synthetic-owner'}}),env)).json();assert(!board.projects.includes(project));assert(!board.tasks.some(t=>t.project===project));assert(!board.projectSummaries.some(p=>p.id===hiddenId));assert.equal(board.coverage.includedCount,snapshot.tasks.filter(t=>t.project!==project).length);
+});
+test('absent filter is unchanged and invalid private visibility configuration fails closed',()=>{const env={};assert.equal(applySitesVisibility(env),env);assert.throws(()=>applySitesVisibility({DOT_BOARD_HIDDEN_PROJECT_IDS:'{"all":true}'}));});

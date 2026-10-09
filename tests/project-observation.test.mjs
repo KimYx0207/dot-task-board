@@ -1,0 +1,11 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {readFile} from 'node:fs/promises';
+import {buildBoard} from '../src/application/board-service.mjs';
+import {boardConfig} from '../config/board.mjs';
+const source=JSON.parse(await readFile(new URL('../fixtures/synthetic.json',import.meta.url),'utf8'));
+const label=source.tasks[0].project;
+const registered=()=>({...structuredClone(source),projectRegistry:[{id:'exact-observed-project',name:label,aliases:[]},{id:'configured-but-not-observed',name:'Synthetic absent old project',aliases:[]}]});
+test('exact label observed in the current snapshot receives its configured stable identity',()=>{const board=buildBoard(registered(),boardConfig);assert(board.tasks.every(task=>task.projectId==='exact-observed-project'));assert.equal(board.projectSummaries.find(project=>project.name===label).id,'exact-observed-project');});
+test('registry-only labels absent from current snapshot do not fabricate projects or activity',()=>{const board=buildBoard(registered(),boardConfig);assert(!board.projects.includes('Synthetic absent old project'));assert(!board.projectSummaries.some(project=>project.id==='configured-but-not-observed'));assert.equal(board.tasks.length,source.tasks.length);assert.equal(board.agents.length,source.agents?.length??0);const empty=buildBoard({...registered(),tasks:[],agents:[]},boardConfig);assert.deepEqual(empty.projects,[]);assert.deepEqual(empty.projectSummaries,[]);});
+test('new unknown exact label remains visible with no inferred intake identity',()=>{const input=registered();input.tasks.push({...input.tasks[0],id:'new-synthetic-task',project:'Synthetic new unknown project'});const board=buildBoard(input,boardConfig);assert.equal(board.tasks.find(task=>task.id==='new-synthetic-task').projectId,null);assert.equal(board.projectSummaries.find(project=>project.name==='Synthetic new unknown project').id,null);assert.equal(board.tasks.find(task=>task.id==='sample-paused').state,'paused');});

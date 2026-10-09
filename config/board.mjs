@@ -1,6 +1,7 @@
 import {agentStates} from './agents.mjs';
 export const boardConfig = Object.freeze({
   title: 'dot 任务看板',
+  taskStatusOverlay: null,
   staleAfterMinutes: 120,
   maxTasks: 200,
   maxAgents: 100,

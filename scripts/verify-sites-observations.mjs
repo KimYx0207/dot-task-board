@@ -1,0 +1,16 @@
+import assert from 'node:assert/strict';import {readFileSync} from 'node:fs';
+import worker from '../dist/sites/index.js';import {sqliteIntakeFixture} from '../tests/sqlite-intake-fixture.mjs';
+const db=sqliteIntakeFixture();try{
+const sample=JSON.parse(readFileSync(new URL('../fixtures/synthetic.json',import.meta.url),'utf8'));sample.tasks[0]={...sample.tasks[0],state:'unknown',observedAt:null};const task=sample.tasks[0];
+const env={DB:db.binding,DOT_BOARD_INGRESS:'sites-owner-private-v1',DOT_BOARD_OWNER_ID:'synthetic-owner',DOT_BOARD_AUDIENCE:'https://example.com',DOT_BOARD_OBSERVATIONS_ENABLED:'true',DOT_BOARD_INTAKE_MCP_ENABLED:'true',DOT_BOARD_SNAPSHOT:JSON.stringify(sample),DOT_BOARD_PROJECT_REGISTRY:JSON.stringify([{id:'p',name:task.project,aliases:[],executionState:'deferred'}]),DOT_BOARD_OBSERVATION_BINDINGS:JSON.stringify([{taskId:task.id,threadId:'synthetic-thread',environment:null,readAllowed:true}])};
+const call=(path,body,owner='synthetic-owner')=>worker.fetch(new Request('https://example.com'+path,{method:body?'POST':'GET',headers:{'oai-authenticated-user-id':owner,...(body?{'content-type':'application/json',origin:'https://example.com'}:{})},body:body?JSON.stringify(body):undefined}),env);
+assert.equal((await call('/api/board',null,'wrong-owner')).status,403);
+const event={taskId:task.id,eventId:'synthetic-compiled-observation',expectedVersion:0,source:{threadId:'synthetic-thread',environment:null,turnId:'synthetic-turn',itemId:'synthetic-item',observedAt:'2026-10-07T23:00:00Z'},changes:{state:'partial',observation:'Synthetic compiled observer verified partial scope.'}};
+assert.equal((await call('/api/observations/events',event)).status,201);const replay=await(await call('/api/observations/events',event)).json();assert.equal(replay.version,1);assert.equal(replay.duplicate,true);
+const result=await(await call('/api/board')).json();assert.equal(result.tasks.find(t=>t.id===task.id).state,'partial');assert(!JSON.stringify(result).includes('synthetic-thread'));assert.equal(db.db.prepare('SELECT COUNT(*) AS n FROM board_observation_events').get().n,1);assert.equal(db.db.prepare('SELECT COUNT(*) AS n FROM dispatch_jobs').get().n,0);
+const rpc=await(await call('/mcp',{jsonrpc:'2.0',id:1,method:'tools/call',params:{name:'get_task_observation_state',arguments:{taskId:task.id}}})).json();assert.equal(rpc.result.structuredContent.version,1);
+const control=await(await call('/mcp',{jsonrpc:'2.0',id:2,method:'tools/call',params:{name:'get_task_execution_control',arguments:{taskId:task.id}}})).json();assert.equal(control.result.structuredContent.version,0);
+const held=await(await call('/mcp',{jsonrpc:'2.0',id:3,method:'tools/call',params:{name:'set_task_execution_control',arguments:{taskId:task.id,expectedVersion:0,state:'canceled',reason:'Synthetic explicit task scope cancellation'}}})).json();assert.equal(held.result.structuredContent.version,1);
+const controlled=await(await call('/api/board')).json();assert.equal(controlled.tasks.find(t=>t.id===task.id).state,'canceled');assert.equal(db.db.prepare('SELECT COUNT(*) AS n FROM board_observation_events').get().n,1);
+console.log('Compiled Sites observation read/write/replay, task-control precedence, MCP and owner isolation passed (synthetic, no network).');
+}finally{db.close();}

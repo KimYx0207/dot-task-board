@@ -13,16 +13,16 @@ Contributions that fix bugs, improve adapters, clarify the interface or strength
 
 ## Local checks
 
-Use Node.js 22 or newer. No dependency installation is needed.
+Use Node.js 24 or newer. No dependency installation is needed.
 
 ```sh
 npm run check
 npm run check:public
-npm test
 npm run build
+npm test
 ```
 
-For UI changes, check narrow screens, keyboard access, long text, empty data, unknown states, failed refreshes and preserved expanded details. State which checks ran and which did not.
+For UI changes, check narrow screens, keyboard access, long text, empty data, unknown states, failed refreshes and preserved expanded details. For intake changes, check repeated submissions, uncertain save receipts, project switches, context retention and owner isolation. State which checks ran and which did not.
 
 ## Data and compatibility
 
@@ -30,7 +30,11 @@ For UI changes, check narrow screens, keyboard access, long text, empty data, un
 - A new schema needs a version, compatibility policy and explicit failure behavior.
 - Parent-child relationships must come from input records. Project grouping does not establish parentage.
 - Without observed agents, keep the roster empty or unknown. Role labels do not create identities.
-- Adapters transform input only. They must not collect credentials, access accounts or control tasks.
+- Snapshot and Workbench adapters transform authorized input only; they do not access accounts or execute tasks.
+- Optional persistence adapters must preserve owner isolation, expected versions and idempotence. Keep native execution behind an explicitly supplied host adapter.
+- Request submission, read acknowledgement, acceptance and execution are separate facts. Never mark work running from a queue claim or a successful save.
+- Preserve original thread/environment bindings and safe checkpoint requirements. Do not retry an uncertain external create.
+- Keep queue and Events experiments disabled by default; a mock test is not live integration acceptance.
 
 ## Documentation languages
 

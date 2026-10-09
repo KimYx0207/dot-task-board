@@ -22,7 +22,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        node: ['22', '24']
+        node: ['24']
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -33,6 +33,9 @@ jobs:
           package-manager-cache: false
       - run: npm run check
       - run: npm run check:public
-      - run: npm test
       - run: npm run build
+      - run: npm test
       - run: node --check dist/server/index.js
+      - run: node --check dist/sites/index.js
+      - run: node --check dist/candidate/index.js
+      - run: SITE_BRIDGE_COMPILED=true MANUAL_CHECK_COMPILED=true node --test tests/sites-event-bridge.test.mjs tests/manual-task-check.test.mjs
