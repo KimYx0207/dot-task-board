@@ -44,11 +44,21 @@ It displays records you authorize it to use. It does not automatically obtain ev
 
 This is a prerelease. The build and packaging path has been checked, but a separate user's complete first-time online deployment has not yet been tested. Setup may require steps specific to that user's account.
 
-### What has been checked
+### Latest update: clear status and verified online continuation
 
-The current source has **668 passing automated tests**, plus **18 compiled-application checks**. The deployment package and sample-data behavior have automated coverage. Browser visual and real-device acceptance remain incomplete.
+1. See projects, tasks, associated agents, blockers and evidence together. Canceled history stays in the archive; old or missing observations are marked explicitly.
+2. Save requests with separate read/progress receipts, and drag already-queued tasks into order when the optional queue is configured.
+3. Connect an explicitly authorized dot scheduled check to continue the original online task. The maintainer verified a natural scheduled wake, real work, result readback, and a later scheduled check that did not repeat the completed step.
 
-**Native automatic execution, automatic continuation and real external callbacks are not yet verified.** A request being saved or a task status changing does not mean an agent has started work. See [integration status](docs/integrations.md) and the [deployment acceptance checklist](docs/sites-deployment.md#5-accept-the-new-online-installation).
+The third item is a **verified host workflow**, not a scheduler installed by this repository. Your own dot needs the supported scheduling, original-task access and execution tools. Follow the [continuation setup and acceptance steps](docs/integrations.md#scheduled-dot-continuation).
+
+**Local automatic dispatch, the cloud-thread request-dispatch chain, and real external callbacks remain unverified.** A saved request, a running-turn receipt or one completed substep does not prove that every task is finished. The release preserves the existing execution controls and does not import the maintainer's private account, task data or schedule.
+
+Automated checks and the exact revision are available in [CI](https://github.com/KimYx0207/dot-task-board/actions). A separate user's full first-time setup and real-device acceptance remain incomplete. See the [deployment checklist](docs/sites-deployment.md#5-accept-the-new-online-installation).
+
+### Keep existing requirements visible
+
+Existing goals and acceptance criteria are shown separately from new form feedback; an empty inbox does not mean there are no task requirements. Owner-private Sites with the complete schema can edit these fields and source references on the original task, using independent versions and idempotent saves while preserving task identity, status and controls. Default local previews remain view-only. See the [requirements interface and boundaries](docs/integrations.md#existing-task-requirements). Descriptions never start execution.
 
 ## The four public author links
 

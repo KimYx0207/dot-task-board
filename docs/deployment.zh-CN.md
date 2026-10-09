@@ -63,6 +63,7 @@ node --check dist/server/index.js
 7. `0006_board_observation_outbox.sql`
 8. `0007_dispatch_manual_authorizations.sql`
 9. `0008_manual_task_status.sql`
+10. `0009_task_requirements.sql`
 
 完整表结构不代表所有宿主专用功能都会启用。**Sites 部署只使用[在线指南](sites-deployment.zh-CN.md)的完整 Drizzle 链，不按本节操作。** 两条链不能重复应用到同一数据库。本机受管理安装会自行应用普通 SQL 迁移，不要手工重复执行。
 

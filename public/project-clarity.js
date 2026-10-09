@@ -5,6 +5,33 @@ import {aggregateProjects, effectiveExecutionState, originalQueueTaskContext} fr
 const list = value => Array.isArray(value) ? value : [];
 const safe = (value, fallback = '') => typeof value === 'string' && !/(?:__external_|\/workspace\/|\/user_notes\/|\/agent_notes\/|\/root\/|dream_notes|system\s*prompt)/i.test(value) ? value : fallback;
 const memory = new WeakMap();
+// Display classification only. Keep the historical task ID, controls and source intact.
+export function taskPresentationKind(task) {
+  return taskDisplayProjection(task).displayState === 'canceled' ? 'history' : 'business';
+}
+export function presentationScope(board) {
+  const tasks = list(board?.tasks), business = tasks.filter(task => taskPresentationKind(task) === 'business');
+  return {registeredTasks:tasks.length, registeredProjects:new Set([...list(board?.projects).map(value=>typeof value==='string'?value:value?.name),...tasks.map(task=>task.project),...list(board?.agents).flatMap(agent=>list(agent.projectNames))].filter(Boolean)).size,
+    businessTasks:business.length, businessProjects:new Set(business.map(task=>task.project).filter(Boolean)).size,
+    historicalTasks:tasks.filter(task=>taskPresentationKind(task)==='history').length,
+    auxiliaryTasks:tasks.filter(task=>taskPresentationKind(task)==='auxiliary').length};
+}
+export function presentationBoard(board, archived=false) {
+  const tasks=list(board?.tasks).filter(task=>(taskPresentationKind(task)!=='business')===archived), ids=new Set(tasks.map(task=>task.id)), names=new Set(tasks.map(task=>task.project));
+  const agents=list(board?.agents).map(agent=>({...agent,taskIds:list(agent.taskIds).filter(id=>ids.has(id)),projectNames:list(agent.projectNames).filter(name=>names.has(name))})).filter(agent=>agent.taskIds.length||tasks.some(task=>list(task.assignedAgentIds).includes(agent.id)));
+  return {...board,tasks,agents,projects:[...names],projectSummaries:list(board?.projectSummaries).filter(project=>names.has(project.name))};
+}
+export function projectPresentationKind(board, name) {
+  const kinds=list(board?.tasks).filter(task=>task.project===name).map(taskPresentationKind);
+  return kinds.includes('business')?'business':kinds.includes('auxiliary')?'auxiliary':kinds.includes('history')?'history':'registered';
+}
+export function ownerObservationLabel(owner, now=Date.now(), staleAfterMinutes=120) {
+  const time=Date.parse(owner?.activity?.observedAt);
+  if (!Number.isFinite(time) || !owner?.activity?.state || owner.activity.state==='unknown') return 'Agent 当前活动未核实';
+  if (time>now+300000) return 'Agent 观察时间异常 · 活动待核实';
+  if (now-time>staleAfterMinutes*60000) return 'Agent 活动观察已过期 · 当前待核实';
+  return 'Agent 有带时间的活动记录 · 不代表持续执行';
+}
 export function clarityBoard(board){
   const tasks=list(board?.tasks).map(task=>{const display=taskDisplayProjection(task,board?.presentation?.states);return {...task,...display,state:display.displayState};}).sort((a,b)=>Number.isFinite(a.displayStateView?.order)&&Number.isFinite(b.displayStateView?.order)?a.displayStateView.order-b.displayStateView.order||a.title.localeCompare(b.title,'zh-CN'):0);
   return {...board,tasks,displayCounts:Object.fromEntries([...new Set([...Object.keys(board?.presentation?.states||{}),...tasks.map(t=>t.state)])].map(state=>[state,tasks.filter(t=>t.state===state).length]))};
@@ -46,24 +73,25 @@ function dom(container) {
   return {el, button};
 }
 
-export function renderProjectClarity(container, board, queue, {project = '', query = '', taskState = 'all', contentType = 'all', onProject, onTask, onAgent, onClear, statusController, now = Date.now(), staleAfterMinutes = 120} = {}) {
-  const {el, button} = dom(container), model = aggregateProjects(clarityBoard(board), {project, query, taskState, now, staleAfterMinutes});
+export function renderProjectClarity(container, board, queue, {project = '', query = '', taskState = 'all', contentType = 'all', recordScope = 'all', onProject, onTask, onAgent, onClear, statusController, now = Date.now(), staleAfterMinutes = 120} = {}) {
+  const {el, button} = dom(container), model = aggregateProjects(clarityBoard(board), {project, query, taskState, now, staleAfterMinutes}), scopeCounts=presentationScope(board);
   const state = memory.get(container) || new Set(); memory.set(container, state);
   const disclosure = (key, label, cls) => { const node = el('details', cls); node.open = state.has(key); node.addEventListener('toggle', () => node.open ? state.add(key) : state.delete(key)); const summary = el('summary', '', label); summary.dataset.focusKey = key; node.append(summary); return node; };
   const root = el('section', 'project-clarity'); root.dataset.contentType = contentType;
   const scope = el('div', 'pc-scope');
-  scope.append(el('p', 'pc-scope-count', project ? `当前项目 · ${model.metrics.tasks} 项任务` : `${model.scope.projectCount} 个项目 · ${model.scope.taskCount} 项任务`));
-  scope.append(el('span', 'pc-muted', (query || taskState !== 'all') ? `筛选后 ${model.metrics.projects} 个项目 · ${model.metrics.tasks} 项任务` : '已收录的部分记录'));
+  scope.append(el('p', 'pc-scope-count', recordScope==='archive'?`归档历史 · ${scopeCounts.registeredTasks} 项记录`:project ? `当前项目 · ${model.metrics.tasks} 项登记任务` : `${scopeCounts.businessProjects} 个有效业务项目 · ${scopeCounts.businessTasks} 项业务任务`));
+  scope.append(el('span', 'pc-muted', (query || taskState !== 'all') ? `筛选后 ${model.metrics.projects} 个项目 · ${model.metrics.tasks} 项任务` : recordScope==='business'?'当前业务视图；取消历史仅在归档查看':`已登记 ${scopeCounts.registeredProjects} 个项目分组、${scopeCounts.registeredTasks} 项任务；含 ${scopeCounts.historicalTasks} 项取消历史，均保留可查`));
   root.append(scope);
   const grid = el('div', 'pc-grid'); if (project) grid.classList.add('is-selected');
   for (const group of model.projects) {
     if(contentType === 'agents' && !group.agents.length) continue;
     const section = el('section', 'pc-project'), head = el('header', 'pc-project-head'), h2 = el('h2');
-    h2.append(button(group.name, () => onProject?.(group.name), 'pc:project:' + group.name));
+    const category=projectPresentationKind(board,group.name), headingName=category==='auxiliary'?'辅助记录 · 环境能力检查':category==='history'?'历史记录 · '+group.name:group.name;
+    h2.append(button(headingName, () => onProject?.(group.name), 'pc:project:' + group.name));
     head.append(h2, el('span', 'pc-task-count', `${group.tasks.length} 项任务`)); section.append(head);
     if (contentType === 'agents') {
       const roster = el('div', 'pc-owner-roster');
-      for (const owner of group.agents) { const item = el('div', 'pc-roster-person'); item.append(button(owner.name, () => onAgent?.(owner.id), 'pc:agent:' + group.name + ':' + owner.id), el('span', 'pc-muted', '已记录的承接关系 · 当前执行需回执确认')); roster.append(item); }
+      for (const owner of group.agents) { const item = el('div', 'pc-roster-person'); item.append(button(owner.name, () => onAgent?.(owner.id), 'pc:agent:' + group.name + ':' + owner.id), el('span', 'pc-muted', ownerObservationLabel(owner,now,staleAfterMinutes))); roster.append(item); }
       if (!group.agents.length) roster.append(el('p', 'pc-empty', '这个项目尚无负责人关联记录'));
       section.append(roster);
     } else for (const mapped of group.tasks) {
@@ -74,15 +102,30 @@ export function renderProjectClarity(container, board, queue, {project = '', que
       const status = statusController ? createQuickStatus(container,task,c,statusController) : el('span', 'pc-status', c.status); status.dataset.state = c.manual ? c.manual.state : c.stopped ? task.state : c.executionState === 'running' ? 'running' : task.state === 'running' ? 'unknown' : task.state;
       if(c.manual&&!statusController) status.append(el('span','pc-manual-origin','手动'));
       heading.append(title, status); article.append(heading);
+      const demand=el('section','pc-demand');demand.dataset.sourceKind='task-record';
+      demand.append(el('h3','','既有任务需求'),el('p','pc-stamp','来源：当前任务记录 · 与新增需求/反馈记录分别保留'));
+      for(const [label,value] of [['目标',task.goal],['完成标准',task.acceptanceCriteria]]){
+        const row=el('p','pc-copy');row.append(el('strong','',label+'：'),el('span','',safe(value)||'尚未记录'));demand.append(row);
+      }
+      article.append(demand);
       if(statusController)renderQuickStatusFeedback(article,task,statusController);
       if (contentType !== 'tasks' && c.owners.length) {
         const owner = el('div', 'pc-owner'); owner.append(el('span', 'pc-field-label', '负责人'));
         for (const person of c.owners) owner.append(button(safe(person.name, '已记录负责人'), () => onAgent?.(person.id), 'pc:owner:' + task.id + ':' + person.id));
         if(c.executionState === 'running') owner.append(el('span', 'pc-owner-state', '有新执行回执'));
-        else if(c.threadVerified) owner.append(el('span', 'pc-owner-state', '原线程已绑定'));
+        else {if(c.threadVerified) owner.append(el('span', 'pc-owner-state', '原线程已绑定'));for(const person of c.owners)owner.append(el('span','pc-owner-state',ownerObservationLabel(person,now,staleAfterMinutes)));}
         article.append(owner);
       }
-      if(!associationOnly(c.progress)){const progress = el('section', 'pc-progress'); progress.append(el('h3', '', '最新进展'), el('p', 'pc-copy', c.progress));if(task.observedAt)progress.append(el('span', 'pc-stamp', utcTime(task.observedAt) + (c.freshness === 'old' ? ' · 较早记录' : c.freshness === 'future' ? ' · 时间待核实' : '')));article.append(progress);}
+      if(!associationOnly(c.progress)){
+        const historicalObservation=c.freshness==='old';
+        const progress = el('section', 'pc-progress');
+        progress.append(el('h3', '', historicalObservation?'历史导入记录':'最新进展'));
+        if(historicalObservation)progress.append(el('p','pc-stamp','以下内容来自较早的观察记录，不代表当前部署统计，也不是自动接续验收结果。'));
+        progress.append(el('p', 'pc-copy', c.progress));
+        if(task.observedAt)progress.append(el('span', 'pc-stamp', utcTime(task.observedAt) + (c.freshness === 'old' ? (c.manualCompleted?' · 历史观察已过期，手动完成决定保持':' · 观察已过期，当前进展待核实') : c.freshness === 'future' ? ' · 时间待核实' : '')));
+        article.append(progress);
+      }
+      if(!task.observedAt) article.append(el('p','pc-stamp',c.manualCompleted?'历史观察时间未记录 · 手动完成决定保持':'观察时间未记录 · 当前进展待核实'));
       if (c.execution) {
         const label = c.executionState === 'completed' ? '最近一次执行已返回结果' : c.stopped ? '查看既有执行回执' : c.executionState === 'running' ? '查看当前执行回执' : '查看最近执行记录';
         const receipt = disclosure('pc:receipt:' + task.id, label, 'pc-receipt');
@@ -111,13 +154,52 @@ export function renderTaskHistory(container,history){
   container.append(details);
 }
 
+function requirementResponse(value,taskId){return value?.taskId===taskId&&Number.isSafeInteger(value.version)&&value.version>=0&&typeof value.goal==='string'&&typeof value.acceptanceCriteria==='string'&&value.grantsExecution===false&&['goal','acceptanceCriteria'].every(key=>Array.isArray(value.sourceReferences?.[key])&&value.sourceReferences[key].every(ref=>typeof ref==='string'));}
+export function createTaskRequirementsController({requestJson,supported=()=>true,uuid=()=>globalThis.crypto.randomUUID(),onChange=()=>{},onSaved=()=>{}}){
+ const entries=new Map();
+ const get=id=>{if(!entries.has(id))entries.set(id,{loaded:false,loading:false,saving:false,data:null,goal:'',acceptanceCriteria:'',sources:'',submission:null,error:'',message:''});return entries.get(id);};
+ const notify=()=>{try{onChange();}catch{}};
+ const adopt=(entry,value)=>{entry.data=value;entry.loaded=true;entry.goal=value.goal;entry.acceptanceCriteria=value.acceptanceCriteria;entry.sources=[...new Set([...value.sourceReferences.goal,...value.sourceReferences.acceptanceCriteria])].join('\n');};
+ const saved=(task,value)=>{try{onSaved(task.id,value);}catch{}};
+ async function open(task,force=false){if(!supported())return;const entry=get(task.id);if(entry.loading||entry.saving||entry.loaded&&!force)return;entry.loading=true;entry.error='';notify();
+  try{const value=await requestJson('/api/tasks/'+encodeURIComponent(task.id)+'/requirements');if(!requirementResponse(value,task.id))throw Error('invalid_response');const pending=entry.submission;
+   const confirmed=pending&&value.version>pending.expectedVersion&&Object.entries(pending.changes).every(([key,text])=>value[key]===text&&JSON.stringify(value.sourceReferences[key])===JSON.stringify(pending.sourceReferences));
+   adopt(entry,value);if(confirmed){entry.submission=null;entry.message='已回读确认保存';saved(task,value);}else if(pending)entry.message='已读取当前版本；原保存结果仍待核对，重试将保留原提交标识';
+  }catch{entry.error='暂时无法读取目标与完成标准，请重新读取；不会更改任务状态';}finally{entry.loading=false;notify();}
+ }
+ function edit(id,key,value){const entry=get(id);if(!entry.loaded||entry.loading||entry.saving||entry.submission||!['goal','acceptanceCriteria','sources'].includes(key))return;entry[key]=value;entry.error='';entry.message='';}
+ async function save(task){if(!supported())return;const entry=get(task.id);if(!entry.loaded||entry.loading||entry.saving)return;
+  if(!entry.submission){const changes={};for(const key of ['goal','acceptanceCriteria'])if(entry[key]!==entry.data[key])changes[key]=entry[key];if(!Object.keys(changes).length){entry.message='内容未变化，无需保存';notify();return;}
+   const refs=entry.sources.split(/\r?\n/).map(x=>x.trim()).filter(Boolean);if(!refs.length||refs.length>5||new Set(refs).size!==refs.length||refs.some(x=>x.length>200)||Object.values(changes).some(x=>x.length>400)){entry.error='目标和标准各限400字；请填写1至5条不重复的来源引用，每行一条';notify();return;}
+   try{entry.submission={eventId:uuid(),expectedVersion:entry.data.version,changes,sourceReferences:refs};}catch{entry.error='当前浏览器无法生成保存标识，请保留输入后重新读取';notify();return;}
+  }
+  entry.saving=true;entry.error='';entry.message='';notify();const pending=entry.submission;
+  try{const value=await requestJson('/api/tasks/'+encodeURIComponent(task.id)+'/requirements',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(pending)});if(!requirementResponse(value,task.id)||value.version<=pending.expectedVersion||value.version===pending.expectedVersion+1&&!Object.entries(pending.changes).every(([key,text])=>value[key]===text&&JSON.stringify(value.sourceReferences[key])===JSON.stringify(pending.sourceReferences)))throw Error('invalid_response');adopt(entry,value);entry.submission=null;entry.message=value.duplicate||value.version>pending.expectedVersion+1?'保存回执已确认，显示当前版本':'已保存目标与完成标准';saved(task,value);
+  }catch(error){if(error.status===409){entry.submission=null;entry.loaded=false;entry.error='需求版本已变化或提交冲突，请重新读取后再编辑';}else if(error.status>=400&&error.status<500&&![408,429].includes(error.status)){entry.submission=null;entry.error='保存被拒绝，请核对来源与输入或重新读取；任务状态未修改';}else entry.error='暂时无法确认保存结果。请先重新读取核对；重试会使用同一提交标识';}
+  finally{entry.saving=false;notify();}
+ }
+ return {get,open,edit,save};
+}
+export function renderTaskRequirementsForm(container,task,controller){
+ const {el,button}=dom(container),entry=controller.get(task.id),content=el('div','requirements-editor');
+ content.append(el('p','pc-stamp',`需求记录版本 ${entry.data?.version??'待读取'} · 仅修改描述，不改变任务状态或执行安排`));
+ const fields=[['goal','任务目标',400],['acceptanceCriteria','完成标准',400],['sources','来源引用（每行一个）',1004]],inputs=[];
+ const save=button(entry.saving?'正在保存…':entry.submission?'重试并核对原保存':'保存目标与完成标准',()=>void controller.save(task),'requirements:save:'+task.id,'pc-save-status');
+ const updateSave=()=>{save.disabled=!entry.loaded||entry.loading||entry.saving||(!entry.submission&&entry.goal===entry.data?.goal&&entry.acceptanceCriteria===entry.data?.acceptanceCriteria);};
+ for(const [key,label,max] of fields){const field=el('label','requirements-field',label),area=el('textarea');area.rows=key==='sources'?3:2;area.maxLength=max;area.value=entry[key];area.setAttribute('aria-label',label);area.dataset.focusKey='requirements:'+key+':'+task.id;area.disabled=!entry.loaded||entry.loading||entry.saving||Boolean(entry.submission);area.addEventListener('input',()=>{controller.edit(task.id,key,area.value);updateSave();});field.append(area);content.append(field);inputs.push(area);}
+ const status=el('p',entry.error?'inbox-error':'pc-stamp',entry.error||entry.message||'来源引用用于核对需求，不构成执行授权');status.setAttribute('role','status');content.append(status);
+ const actions=el('div','requirements-actions');actions.append(save,button(entry.loading?'读取中…':'重新读取需求',()=>void controller.open(task,true),'requirements:reload:'+task.id));actions.children[1].disabled=entry.loading||entry.saving;updateSave();content.append(actions);
+ if(entry.data)for(const [key,label] of [['goal','目标来源'],['acceptanceCriteria','完成标准来源']])content.append(el('p','pc-stamp',label+'：'+(entry.data.sourceReferences[key].join('；')||'原任务记录，尚无独立来源引用')));
+ container.replaceChildren(content);
+}
+
 function createQuickStatus(container,task,clarity,controller){
   const {el}=dom(container),entry=controller.get(task.id),select=el('select','pc-status pc-status-select');
   if(controller.supported?.()===false){const badge=el('span','pc-status',clarity.status);badge.title='当前部署未接通可信的手动状态服务';return badge;}
   select.dataset.focusKey='pc:quick-state:'+task.id;
   select.setAttribute('aria-label',safe(task.title,'这项任务')+'的任务状态，选择后自动保存');
   select.title='手动标记任务状态，不会启动执行';
-  const current=el('option','',(entry.loading||entry.saving?'保存中…':clarity.status)+(clarity.manual?' · 手动标记':''));current.value='';current.disabled=true;select.append(current);
+  const current=el('option','',(entry.saving?'保存中…':entry.loading?'读取中…':clarity.status)+(clarity.manual?' · 手动标记':''));current.value='';current.disabled=true;select.append(current);
   const locked=['paused','canceled'].includes(task.state)?task.state:entry.data?.executionControl?.state;
   for(const [value,label] of Object.entries(MANUAL_STATES)){
     const option=el('option','',label);option.value=value;
@@ -151,16 +233,18 @@ function renderQuickStatusFeedback(container,task,controller){
 export function renderRequestInbox(container, value, {onOpen, onRetry, onMore, loading = false, error = ''} = {}) {
   const {el, button} = dom(container); container.hidden = false;
   const state = memory.get(container) || new Set(); memory.set(container, state);
-  const title = el('div', 'inbox-heading'), heading = el('h2', '', '需求收件箱');
+  const title = el('div', 'inbox-heading'), heading = el('h2', '', '新增需求 / 反馈收件箱');
   title.append(heading, button(loading ? '读取中…' : '刷新', () => onRetry?.(), 'inbox:refresh')); title.children[1].disabled = loading;
   const content = [title];
   if (error) { const message = el('p', 'inbox-error', value ? '暂时无法更新，下面保留上次读取的需求。' : '暂时无法读取需求，请稍后重试。'); message.setAttribute('role', 'status'); content.push(message); }
   if (!value) { if (!error) content.push(el('p', '', '正在读取已保存的需求…')); container.replaceChildren(...content); return; }
   const requests = list(value.requests), pending = requests.filter(item => !['completed', 'canceled', 'declined'].includes(item.status));
   const count = el('p', 'inbox-count', `${Number.isSafeInteger(value.unreadCount) ? value.unreadCount : '待核实'} 条待读取 · ${Number.isSafeInteger(value.pendingCount) ? value.pendingCount : '待核实'} 条待处理`); content.push(count);
+  content.push(el('p', 'inbox-note', '仅统计已收到、已读待处理、已受理和待确认需求；不含已分派、处理中、受阻记录。收件箱为空不代表项目全部完成。'));
+  content.push(el('p', 'inbox-note', '既有任务的目标、完成标准与下一步仍在各项目中；无需在这里重复提交。'));
   const row = receipt => { const item = el('div', 'inbox-row'); item.dataset.receiptId = receipt.id; const open = button(safe(receipt.body, '查看需求'), () => onOpen?.(receipt), 'inbox:request:' + receipt.id, 'inbox-open'); const copy = el('div', 'inbox-row-copy'); copy.append(open, el('span', 'inbox-meta', `${safe(receipt.projectName, '所属项目待核实')} · ${requestStates[receipt.status] || '状态待核实'} · ${utcTime(receipt.createdAt)}`)); item.append(copy); return item; };
   for (const receipt of pending.slice(0, 3)) content.push(row(receipt));
-  if (!pending.length) content.push(el('p', 'inbox-empty', '当前范围无待处理需求'));
+  if (!pending.length) content.push(el('p', 'inbox-empty', '当前收件范围无待处理需求；其他任务请看项目和执行队列。'));
   if (pending.length > 3) { const more = el('details', 'inbox-more'); more.open = state.has('inbox:more'); more.addEventListener('toggle', () => more.open ? state.add('inbox:more') : state.delete('inbox:more')); const summary = el('summary', '', `另外 ${pending.length - 3} 条待处理需求`); summary.dataset.focusKey = 'inbox:more'; more.append(summary); for (const receipt of pending.slice(3)) more.append(row(receipt)); content.push(more); }
   if (value.nextCursor && onMore) { const more = button(loading ? '读取中…' : '加载更早的待处理需求', () => onMore(), 'inbox:more-page'); more.disabled = loading; content.push(more); }
   if (value.truncated) content.push(el('p', 'inbox-note', `已显示 ${requests.length} 条，待处理总数以顶部统计为准。`));

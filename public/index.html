@@ -25,9 +25,9 @@
 
 <section class="board-shell" aria-label="任务工作空间">
 <div class="workspace" id="workspace" tabindex="-1">
-  <div class="workspace-context"><div><span class="context-label">当前关注</span><strong id="project-context-label">全部项目</strong></div><label class="sr-only" for="project">关注项目</label><select id="project" class="mobile-project"><option value="">全部项目</option></select><p id="project-context-note">自动唤醒尚未接通；不会从这些观察记录自行启动或恢复任务</p></div>
-  <details id="observation-panel" class="observation-panel" open><summary><span>全部项目与当前任务</span><span class="disclosure-note" id="observation-count">观察快照</span></summary>
-    <p class="observation-description">这里展示已导入的项目和任务。观察记录不是实时运行证明；暂停任务不会自行恢复。</p>
+  <div class="workspace-context"><label for="record-scope">查看范围</label><select id="record-scope" class="record-scope-select"><option value="business">当前业务</option><option value="archive">归档历史记录</option></select><div><span class="context-label">当前关注</span><strong id="project-context-label">全部项目</strong></div><label class="sr-only" for="project">关注项目</label><select id="project" class="mobile-project"><option value="">全部项目</option></select><p id="project-context-note">本页队列不会自行执行。接续需另行配置并授权的 dot 检查；本地自动派发及请求派发闭环仍待验收。</p></div>
+  <details id="observation-panel" class="observation-panel" open><summary><span>已登记项目与任务</span><span class="disclosure-note" id="observation-count">观察快照</span></summary>
+    <p class="observation-description">这里保留已登记任务及历史记录，并逐项标注观察是否齐全。有效业务统计不含已取消记录；观察记录不是实时运行证明。</p>
     <div class="view-toolbar"><label class="sr-only" for="content-type">显示内容</label><select id="content-type"><option value="all">任务与负责人</option><option value="tasks">只看任务</option><option value="agents">只看负责人</option></select><details class="status-panel"><summary>任务状态 <span id="active-status-label">全部</span></summary><div class="filter-toolbar"><span class="filter-label">任务状态</span><nav id="filters" class="filters" aria-label="筛选任务状态"></nav><span id="result-count" class="result-count"></span></div></details><div class="search-inline"><label class="sr-only" for="search">搜索任务或项目</label><input id="search" type="search" placeholder="搜索任务或项目" autocomplete="off"><button id="clear-search" type="button" aria-label="清除搜索" hidden>清除</button></div></div>
     <section class="roster-pane" aria-label="补充观察记录"><div class="roster-heading"><h2 id="results-label">项目资料</h2><p id="relationship-note">只显示已记录的任务与负责人 关系</p></div><div id="collaboration-map"></div><div id="rows" class="rows" hidden></div></section>
 <div id="source" class="source" aria-label="数据来源"><span class="source-indicator" aria-hidden="true"></span><details class="source-details"><summary><strong id="snapshot-mode">状态快照</strong><span id="source-scope"></span><span class="source-more">查看时间与范围</span></summary><p id="source-meta">正在读取观察记录…</p></details><span id="source-label" class="source-label"></span></div>
@@ -52,7 +52,7 @@
       <p id="request-message" class="request-message" role="status" aria-live="polite"></p>
       <div class="request-submit-row"><p>提交不会自动恢复、取消或重启已有任务</p><button id="request-submit" class="request-primary" type="submit" disabled>保存需求</button></div>
     </form>
-    <section class="request-history" aria-labelledby="request-history-heading"><div class="request-history-heading"><h3 id="request-history-heading">本项目需求记录</h3><span id="request-history-count"></span></div><p id="request-history-message" class="request-history-message" role="status"></p><div id="request-list" class="request-list"><p class="request-empty">选择项目后查看服务器保存的记录</p></div><button id="request-more" class="request-secondary" type="button" hidden>加载更多</button><div id="request-detail" class="request-detail" tabindex="-1"></div></section>
+    <section class="request-history" aria-labelledby="request-history-heading"><div class="request-history-heading"><h3 id="request-history-heading">本项目新增需求 / 反馈记录</h3><span id="request-history-count"></span></div><p id="request-history-message" class="request-history-message" role="status"></p><div id="request-list" class="request-list"><p class="request-empty">已有任务需求在项目卡片中查看，无需重复填写；选择项目后查看新增记录</p></div><button id="request-more" class="request-secondary" type="button" hidden>加载更多</button><div id="request-detail" class="request-detail" tabindex="-1"></div></section>
   </div>
 </section></details>
 </div>

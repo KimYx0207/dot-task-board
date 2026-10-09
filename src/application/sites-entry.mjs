@@ -1,3 +1,4 @@
+import {createSitesTaskRequirements} from './sites-task-requirements.mjs';
 import {sitesIdentitySetupResponse} from './sites-setup-identity.mjs';
 import {applySitesVisibility} from '../adapters/sites-visibility.mjs';
 import {createSitesManualTaskStatus} from './sites-manual-task-status.mjs';
@@ -16,7 +17,7 @@ import {createWorker} from '../../worker.mjs';
 // sign-in/OAuth and supplies the per-site identity; this is NOT a generic public
 // Worker authentication adapter. Never expose this entry behind an untrusted proxy.
 export function createSitesPrivateEntry(assets={}){
- const worker=createWorker(assets,undefined,{projectQueueProjection:false,manualStatusFor:env=>createSitesManualTaskStatus(env),manualCheckFor:(env,services)=>createSitesManualCheck(env,services),taskControlsFor:env=>createSitesTaskControls(env),observationsFor:env=>createSitesObservations(env),readObservationSnapshot:async(snapshot,env,owner)=>{const controls=createSitesTaskControls(env),controlled=controls?await controls.overlay(owner,snapshot):snapshot,observations=createSitesObservations(env);const observed=observations?await observations.overlay(owner,controlled):controlled,manual=createSitesManualTaskStatus(env);return manual?manual.overlay(owner,observed):observed;}});
+ const worker=createWorker(assets,undefined,{projectQueueProjection:false,requirementsFor:env=>createSitesTaskRequirements(env),manualStatusFor:env=>createSitesManualTaskStatus(env),manualCheckFor:(env,services)=>createSitesManualCheck(env,services),taskControlsFor:env=>createSitesTaskControls(env),observationsFor:env=>createSitesObservations(env),readObservationSnapshot:async(snapshot,env,owner)=>{const controls=createSitesTaskControls(env),controlled=controls?await controls.overlay(owner,snapshot):snapshot,observations=createSitesObservations(env);const observed=observations?await observations.overlay(owner,controlled):controlled,manual=createSitesManualTaskStatus(env);const displayed=manual?await manual.overlay(owner,observed):observed;return createSitesTaskRequirements(env).overlay(owner,displayed);}});
  return {async fetch(request,env={},ctx={}){
   const setupPath=new URL(request.url).pathname;
   if(setupPath==='/setup'||setupPath==='/api/setup/identity')return sitesIdentitySetupResponse(request,env);

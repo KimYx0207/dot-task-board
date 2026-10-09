@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {handleManualStatusRequest} from '../src/presentation/manual-status-http.mjs';
-const url='https://example.com/api/tasks/test.primary/status';
+const url='https://example.com/api/tasks/synthetic-status-task/status';
 const owner={'oai-authenticated-user-id':'owner'};
 test('manual status HTTP reads and writes path-bound task behind owner and same origin',async()=>{
  const calls=[],manualStatus={get:async(o,t)=>({taskId:t,version:0,state:null}),set:async(o,i)=>{calls.push([o,i]);return {...i,version:1,duplicate:false};}};
@@ -13,7 +13,7 @@ test('manual status HTTP reads and writes path-bound task behind owner and same 
  assert.equal((await post(owner)).status,403);assert.equal(calls.length,0);
  assert.equal((await post({...owner,origin:'https://example.com'},{...input,taskId:'other'})).status,400);assert.equal(calls.length,0);
  assert.equal((await post({...owner,origin:'https://example.com'})).status,200);
- assert.deepEqual(calls,[['owner',{...input,taskId:'test.primary'}]]);
+ assert.deepEqual(calls,[['owner',{...input,taskId:'synthetic-status-task'}]]);
 });
 test('manual status HTTP preserves conflict and fails closed without storage service',async()=>{
  const request=new Request(url,{headers:owner});assert.equal((await handleManualStatusRequest(request,{})).status,503);

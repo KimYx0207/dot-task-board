@@ -1,3 +1,4 @@
+import {taskRequirementsMcpTools,callTaskRequirementsTool} from './task-requirements-mcp.mjs';
 import {manualCheckMcpTools} from './manual-check-mcp.mjs';
 import {taskControlMcpTools,callTaskControlTool} from './task-controls-mcp.mjs';
 import {boardObservationMcpTools,callBoardObservationTool} from './observations-mcp.mjs';
@@ -34,7 +35,7 @@ function intakeMcpArgs(name,args){
   for(const key of ['projectId','requestId','eventId'])if(args[key]!==undefined&&!intakeId(args[key]))throw new IntakeError('invalid_arguments');
   return args;
 }
-export async function handleIntakeMcp(request,{service,mcpEnabled=false,headers={},events=null,eventsEnabled=false,dispatch=null,observations=null,taskControls=null,manualCheck=null}) {
+export async function handleIntakeMcp(request,{service,mcpEnabled=false,headers={},events=null,eventsEnabled=false,dispatch=null,observations=null,taskControls=null,manualCheck=null,requirements=null}) {
   const reply=(body,status=200)=>new Response(JSON.stringify(body),{status,headers:{...headers,'content-type':'application/json; charset=utf-8'}});
   const protocolError=(id,code,message,status=200)=>reply({jsonrpc:'2.0',id,error:{code,message}},status);
   const url=new URL(request.url),origin=request.headers.get('origin');
@@ -50,7 +51,7 @@ export async function handleIntakeMcp(request,{service,mcpEnabled=false,headers=
   if(message.method==='server/discover')return reply({jsonrpc:'2.0',id,result:{resultType:'complete',supportedVersions:[MCP_EVENTS_PROTOCOL],capabilities:{tools:{},...(eventsEnabled&&events?{events:{}}:{})}}});
   if(message.method==='initialize')return reply({jsonrpc:'2.0',id,result:{protocolVersion:['2025-03-26','2025-06-18',MCP_EVENTS_PROTOCOL].includes(message.params?.protocolVersion)?message.params.protocolVersion:'2025-06-18',capabilities:{tools:{listChanged:false}},serverInfo:{name:'dot-board-intake',version:'0.2.0-rc.1-sites-observations'}}});
   if(message.method==='ping')return reply({jsonrpc:'2.0',id,result:{}});
-  if(message.method==='tools/list')return reply({jsonrpc:'2.0',id,result:{tools:[...intakeMcpTools,...(dispatch?dispatchMcpTools:[]),...(observations?boardObservationMcpTools:[]),...(taskControls?taskControlMcpTools:[]),...(manualCheck?manualCheckMcpTools:[])]}});
+  if(message.method==='tools/list')return reply({jsonrpc:'2.0',id,result:{tools:[...intakeMcpTools,...(requirements?taskRequirementsMcpTools:[]),...(dispatch?dispatchMcpTools:[]),...(observations?boardObservationMcpTools:[]),...(taskControls?taskControlMcpTools:[]),...(manualCheck?manualCheckMcpTools:[])]}});
   if(message.method!=='tools/call'&&!['events/list','events/subscribe','events/unsubscribe'].includes(message.method))return protocolError(id,-32601,'Method not found');
   const ownerId=request.headers.get('oai-authenticated-user-id');
   if(!ownerId||ownerId.length>200)return protocolError(id,-32000,'Authentication required',401);
@@ -59,6 +60,10 @@ export async function handleIntakeMcp(request,{service,mcpEnabled=false,headers=
     if(!eventsEnabled||!events)return protocolError(id,-32601,'Events are not enabled');
     try{const result=message.method==='events/list'?await events.list(ownerId):message.method==='events/subscribe'?await events.subscribe(ownerId,message.params??{}):await events.unsubscribe(ownerId,message.params??{});return reply({jsonrpc:'2.0',id,result});}
     catch(error){return reply({jsonrpc:'2.0',id,error:{code:error instanceof McpEventsError?error.rpcCode:-32603,message:error instanceof McpEventsError?error.code:'event_unavailable',...(error instanceof McpEventsError&&error.data?{data:error.data}:{})}},error instanceof McpEventsError?error.status:503);}
+  }
+  if(requirements&&taskRequirementsMcpTools.some(tool=>tool.name===message.params?.name)){
+    try{const result=await callTaskRequirementsTool(requirements,ownerId,message.params.name,message.params.arguments);return reply({jsonrpc:'2.0',id,result:{content:[{type:'text',text:JSON.stringify(result)}],structuredContent:result,isError:false}});}
+    catch(error){return protocolError(id,-32000,typeof error?.code==='string'?error.code:'requirements_unavailable',Number.isInteger(error?.status)?error.status:503);}
   }
   if(manualCheck&&['prepare_manual_task_check','authorize_request_continuation'].includes(message.params?.name)){
     try{const result=await (message.params.name==='authorize_request_continuation'?manualCheck.authorizeContinuation(ownerId,message.params.arguments):manualCheck.prepare(ownerId,message.params.arguments));return reply({jsonrpc:'2.0',id,result:{content:[{type:'text',text:JSON.stringify(result)}],structuredContent:result,isError:false}});}

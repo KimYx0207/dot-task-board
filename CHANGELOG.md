@@ -4,6 +4,20 @@
 
 ## 0.2.0-rc.1 — 2026-10-09 (source prerelease)
 
+### 2026-10-09 — existing requirements and accurate loading labels
+
+- Show existing goals/acceptance separately from new form feedback; add source-backed, incremental requirement editing with independent versions and idempotent readback on owner-private Sites. Local previews do not claim write support.
+- Append only the requirements schema, preserving original identities, status, execution controls and history; distinguish reading from saving in status labels.
+- Publish no maintainer task-ID exceptions; historical labels depend on observation age. Full automatic dispatch and real external callbacks remain unverified.
+
+### 2026-10-09 — honest status views and bounded continuation acceptance
+
+- Separate active business records from archived cancellation history without deleting source identities.
+- Show stale or missing observations explicitly; mark the board's old imported version and totals as historical rather than current deployment statistics.
+- Clarify the inbox's narrow lifecycle scope: an empty inbox does not mean every project is finished.
+- Document a naturally scheduled native online continuation followed by a no-repeat check. Preserve the distinction from local automatic dispatch and the cloud_threads request-dispatch chain, which remain unverified.
+- Publish portable presentation changes and bilingual guidance; no private snapshots, account mappings, deployment credentials, or changes to authorization/dispatch guards.
+
 ### First-install Site identity lookup
 
 - Fix the first-install dependency loop: add a disabled-by-default, read-only `/setup` page and `/api/setup/identity` endpoint for authenticated Sites requests.
@@ -36,7 +50,7 @@
 
 Historical validation for the earlier portable revision: Node.js 24.19.0; 219 source files; 649/649 tests passed with zero skips in the integrated source and clean archive. All three builds, compiled syntax, synthetic owner-private observation checks, managed local installation, request persistence, idempotent retries and stop/restart passed. No dependency installation is required.
 
-This is still a prerelease. Browser visual and real-device acceptance were not completed because of the available preview environment. Live plugin connection, native automatic execution, automatic continuation and real external callback delivery remain unverified.
+At that earlier revision, browser visual and real-device acceptance were not completed because of the available preview environment; live plugin connection, native automatic execution, automatic continuation and external callback delivery had not been verified. The bounded host-continuation result above is newer and does not establish full automatic dispatch.
 
 - Separate public, candidate and owner-private build outputs; include all loopback static assets and the exact structural schema chain.
 - Gate manual status edits on a trusted host service; retain read-only status on unsupported installs.

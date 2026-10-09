@@ -1,3 +1,4 @@
+import {handleTaskRequirementsRequest} from './task-requirements-http.mjs';
 import {handleObservationRequest} from './observations-http.mjs';
 import {handleManualStatusRequest} from './manual-status-http.mjs';
 import {handleDispatchRequest} from './dispatch-http.mjs';
@@ -14,6 +15,7 @@ export const responseHeaders = {
 export async function handleRequest(request,{readSnapshot,getAsset,config,intake}) {
   const headers = {...responseHeaders};
   if(intake){const manual=await handleManualStatusRequest(request,{manualStatus:intake.manualStatus,headers});if(manual)return manual;}
+  if(intake){const requirements=await handleTaskRequirementsRequest(request,{requirements:intake.requirements,headers});if(requirements)return requirements;}
   if(intake && new URL(request.url).pathname==='/mcp')return handleIntakeMcp(request,{...intake,headers});
   if(intake){const observed=await handleObservationRequest(request,{observations:intake.observations,headers});if(observed)return observed;}
   if(intake){const queue=await handleDispatchRequest(request,{dispatch:intake.dispatch,headers});if(queue)return queue;}
@@ -25,7 +27,7 @@ export async function handleRequest(request,{readSnapshot,getAsset,config,intake
     const result = await readBoard(readSnapshot,config);
     response = new Response(JSON.stringify(result.body),{status:result.status,headers:{...headers,'content-type':'application/json; charset=utf-8'}});
   } else if (url.pathname === '/api/config') {
-    response = new Response(JSON.stringify({...config,manualStatusEnabled:Boolean(intake?.manualStatus)}),{headers:{...headers,'content-type':'application/json; charset=utf-8'}});
+    response = new Response(JSON.stringify({...config,manualStatusEnabled:Boolean(intake?.manualStatus),requirementsEnabled:Boolean(intake?.requirements&&await intake.requirements.available())}),{headers:{...headers,'content-type':'application/json; charset=utf-8'}});
   } else if (url.pathname === '/health') {
     response = new Response(JSON.stringify({status:'ok',mode:intake?.capabilities?.enabled?'snapshot-and-project-intake':intake?.capabilities?.canSubmit?'project-intake-verifying':'read-only'}),{headers:{...headers,'content-type':'application/json'}});
   } else if (url.pathname === '/preview/mobile') {

@@ -1,6 +1,7 @@
 import vm from 'node:vm';
 import test from 'node:test';import assert from 'node:assert/strict';import {readFileSync,readdirSync} from 'node:fs';import {DatabaseSync} from 'node:sqlite';
 import {createSitesPrivateEntry} from '../src/application/sites-entry.mjs';import {sqliteIntakeFixture} from './sqlite-intake-fixture.mjs';import {createD1DispatchQueue} from '../src/adapters/d1-dispatch-queue.mjs';
+import {presentationScope,projectPresentationKind,presentationBoard} from '../public/project-clarity.js';
 const sample=JSON.parse(readFileSync(new URL('../fixtures/synthetic.json',import.meta.url),'utf8'));
 const env={DOT_BOARD_INGRESS:'sites-owner-private-v1',DOT_BOARD_OWNER_ID:'synthetic-owner',DOT_BOARD_AUDIENCE:'https://example.com',DOT_BOARD_SNAPSHOT:JSON.stringify(sample),DOT_BOARD_PROJECT_REGISTRY:JSON.stringify([{id:'synthetic-project',name:sample.tasks[0].project,aliases:[],executionState:'paused'}]),DOT_BOARD_INTAKE_MCP_ENABLED:'true'};
 const request=(path,owner='synthetic-owner',origin='https://example.com')=>new Request(origin+path,{headers:owner?{'oai-authenticated-user-id':owner}:{}});
@@ -20,13 +21,16 @@ test('real-project overview does not inherit historical queue counts or legacy p
 test('real task counts and the persistent automatic-wakeup notice remain explicit after rendering',()=>{
  const app=readFileSync(new URL('../public/app.js',import.meta.url),'utf8'),overview=readFileSync(new URL('../public/project-overview.js',import.meta.url),'utf8');
  const element=()=>({textContent:'',dataset:{},setAttribute(){},append(){},replaceChildren(){}}),nodes=new Map();
- const node=id=>{if(!nodes.has(id))nodes.set(id,element());return nodes.get(id);},ui={project:''};
- const sandbox=vm.createContext({$:node,ui,projectNames:()=>['Synthetic project'],tasks:()=>[{project:'Synthetic project'}],button:element,el:element,setProject(){}});
+ const node=id=>{if(!nodes.has(id))nodes.set(id,element());return nodes.get(id);},ui={project:'',recordScope:'business'};
+ const board={projects:['Synthetic project'],tasks:[{id:'synthetic-task',project:'Synthetic project',state:'partial'}]};
+ const sandbox=vm.createContext({$:node,ui,projectNames:()=>['Synthetic project'],currentBoard:()=>board,visibleBoard:()=>presentationBoard(board,false),presentationScope,projectPresentationKind,list:value=>Array.isArray(value)?value:[],button:element,el:element,setProject(){}});
  const rendering=app.slice(app.indexOf('function renderProjects(){'),app.indexOf('function renderFilters(){'));
  for(const project of ['', 'Synthetic project', 'Removed project']){
   ui.project=project;node('project-context-note').textContent='stale';vm.runInContext(rendering+'\nrenderProjects();',sandbox);
-  assert.match(node('project-context-note').textContent,/自动唤醒.*尚未接通/);
-  assert.match(node('project-context-note').textContent,/自动续跑.*尚未接通|不会.*自行启动或恢复任务/);
+  assert.match(node('project-context-note').textContent,/本页队列不会自行执行/);
+  assert.match(node('project-context-note').textContent,/另行配置并授权的 dot 检查沿原任务推进/);
+  assert.match(node('project-context-note').textContent,/本地自动派发仍待验收/);
+  assert.match(node('project-context-note').textContent,/Agent 当前活动需新鲜执行回执确认/);
  }
  assert(overview.includes('项已有任务'));
 });

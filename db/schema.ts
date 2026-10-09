@@ -53,3 +53,7 @@ export const taskManualStatusEvents=sqliteTable('task_manual_status_events',{
  check('task_manual_status_state',sql`${t.state} IN ('queued','running','blocked','paused','completed','canceled')`),
  check('task_manual_status_reason',sql`length(${t.reason})<=1200`)
 ]);
+
+export const taskRequirementEvents=sqliteTable('task_requirement_events',{
+ ownerId:text('owner_id').notNull(),eventId:text('event_id').notNull(),taskId:text('task_id').notNull(),payloadDigest:text('payload_digest').notNull(),version:integer('version').notNull(),fieldsJson:text('fields_json').notNull(),updatedAt:text('updated_at').notNull()
+},t=>[primaryKey({columns:[t.ownerId,t.eventId]}),uniqueIndex('task_requirements_version').on(t.ownerId,t.taskId,t.version),index('task_requirements_latest').on(t.ownerId,t.taskId,t.version),check('task_requirements_digest',sql`length(${t.payloadDigest})=64`),check('task_requirements_version_positive',sql`${t.version}>=1`),check('task_requirements_json',sql`json_valid(${t.fieldsJson})`)]);

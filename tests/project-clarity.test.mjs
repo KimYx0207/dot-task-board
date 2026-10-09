@@ -1,7 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import vm from 'node:vm';
 import {readFile} from 'node:fs/promises';
-import {taskClarity,renderProjectClarity,renderRequestInbox,utcTime,createManualStatusController,clarityBoard,renderManualStatusForm} from '../public/project-clarity.js';
+import {taskClarity,renderProjectClarity,renderRequestInbox,utcTime,createManualStatusController,clarityBoard,renderManualStatusForm,presentationScope,taskPresentationKind,projectPresentationKind,ownerObservationLabel,presentationBoard} from '../public/project-clarity.js';
 class Node {
  constructor(tag,doc){this.tagName=tag.toUpperCase();this.ownerDocument=doc;this.children=[];this.dataset={};this.attributes={};this.events=new Map();this.className='';this.ownText='';this.classList={add:v=>{this.className+=' '+v;},contains:v=>this.className.split(/\s+/).includes(v)};}
  set textContent(value){this.ownText=String(value);this.children=[];}get textContent(){return this.ownText+this.children.map(n=>n.textContent).join('');}
@@ -24,7 +25,7 @@ test('only typed unexpired execution evidence is running',()=>{const b=input(),p
 test('a finished request does not complete its project task',()=>{const b=input(),root=setup();renderProjectClarity(root,b,queue(),{now});assert.equal(nodes(root,'pc-status')[0].textContent,'部分完成');assert.match(root.textContent,/最近一次执行已返回结果/);assert.match(root.textContent,/不代表整个项目已完成/);assert.match(root.textContent,/Read-only query completed/);});
 test('paused and canceled tasks never repeat an old instruction to resume',()=>{for(const state of ['paused','canceled']){const b=input();b.tasks[0].state=state;b.tasks[0].nextAction='Resume and publish now';const root=setup();renderProjectClarity(root,b,queue(),{now});assert.doesNotMatch(root.textContent,/Resume and publish now/);assert.match(root.textContent,/已暂停|已取消/);assert.match(root.textContent,/保持暂停|不再继续/);}});
 test('raw recorded running without a concrete receipt stays unverified',()=>{const b=input();b.tasks[0].state='running';assert.equal(taskClarity(b.tasks[0],b,null,now).status,'近况待核实');});
-test('project and task counts remain distinct under a project selection',()=>{const root=setup();renderProjectClarity(root,input(),null,{now,project:'Alpha'});assert.equal(nodes(root,'pc-project').length,1);assert.match(nodes(root,'pc-scope')[0].textContent,/当前项目 · 1 项任务/);renderProjectClarity(root,input(),null,{now});assert.match(nodes(root,'pc-scope')[0].textContent,/2 个项目 · 1 项任务/);});
+test('project and task counts remain distinct under a project selection',()=>{const root=setup();renderProjectClarity(root,input(),null,{now,project:'Alpha'});assert.equal(nodes(root,'pc-project').length,1);assert.match(nodes(root,'pc-scope')[0].textContent,/当前项目 · 1 项登记任务/);renderProjectClarity(root,input(),null,{now});assert.match(nodes(root,'pc-scope')[0].textContent,/1 个有效业务项目 · 1 项业务任务/);});
 test('content-type selector controls the visible objects',()=>{const root=setup();renderProjectClarity(root,input(),null,{now,contentType:'tasks'});assert.equal(nodes(root,'pc-task').length,1);assert.equal(nodes(root,'pc-owner').length,0);renderProjectClarity(root,input(),null,{now,contentType:'agents'});assert.equal(nodes(root,'pc-task').length,0);assert.equal(nodes(root,'pc-roster-person').length,2);});
 test('project, task, owner and evidence controls keep actual identities',()=>{const root=setup(),actions=[];renderProjectClarity(root,input(),null,{now,onProject:id=>actions.push(['project',id]),onTask:id=>actions.push(['task',id]),onAgent:id=>actions.push(['owner',id])});nodes(root,'pc-project-head')[0].children[0].children[0].click();nodes(root,'pc-task-title')[0].click();nodes(root,'pc-owner')[0].children[1].click();nodes(root,'pc-footer')[0].children[0].click();assert.deepEqual(actions,[['project','Alpha'],['task','a'],['owner','owner'],['task','a']]);});
 test('disclosures remain open after background rendering and have stable focus keys',()=>{const root=setup();renderProjectClarity(root,input(),queue(),{now});for(const cls of ['pc-receipt','pc-blocker']){const detail=nodes(root,cls)[0];assert(detail.children[0].dataset.focusKey);detail.open=true;detail.fire('toggle');}renderProjectClarity(root,input(),queue(),{now});assert.equal(nodes(root,'pc-receipt')[0].open,true);assert.equal(nodes(root,'pc-blocker')[0].open,true);});
@@ -38,6 +39,7 @@ test('inbox client is read-only and refreshes after user submission',async()=>{c
 test('inbox pagination and accepted state remain actionable without changing status',()=>{const root=setup();let more=0;renderRequestInbox(root,{requests:[{id:'accepted',body:'An accepted request',projectName:'Alpha',status:'accepted'}],pendingCount:70,unreadCount:2,truncated:true,nextCursor:'opaque'}, {onMore:()=>more++});assert.match(root.textContent,/已受理/);assert.match(root.textContent,/70 条待处理/);walk(root).find(n=>n.dataset.focusKey==='inbox:more-page').click();assert.equal(more,1);});
 
 const statusResult=(taskId,version,state,extra={})=>({taskId,version,state,source:'owner_manual',updatedAt:'2026-10-08T11:00:00Z',executionControl:{state:'active',version:0},...extra});
+test('unsupported manual status renders a badge without an editable quick-state control',()=>{const b=input(),root=setup();let requests=0;const controller=createManualStatusController({supported:()=>false,requestJson:async()=>{requests++;throw Error('unexpected request');}});renderProjectClarity(root,b,null,{now,statusController:controller});assert.equal(nodes(root,'pc-status-select').length,0);assert.equal(nodes(root,'pc-status').length,b.tasks.length);assert(nodes(root,'pc-status').every(node=>node.tagName==='SPAN'));assert.equal(requests,0);});
 test('manual progress is a task label, never fresh execution evidence',()=>{const b=input();b.tasks[0].manualStatus={state:'running',version:1,source:'owner_manual'};const c=taskClarity(b.tasks[0],b,null,now);assert.equal(c.status,'进行中');assert.equal(c.executionState,null);const root=setup();renderProjectClarity(root,b,null,{now});assert.match(nodes(root,'pc-status')[0].textContent,/进行中手动/);assert.doesNotMatch(root.textContent,/正在执行|有新执行回执/);});
 test('external pause overrides an older manual running label and filters',()=>{const b=input();b.tasks[0].state='paused';b.tasks[0].manualStatus={state:'running',version:2,source:'owner_manual'};assert.equal(taskClarity(b.tasks[0],b,null,now).status,'已暂停');assert.equal(clarityBoard(b).tasks[0].state,'paused');});
 test('manual completion participates in filters without replacing observations or acceptance',()=>{const b=input(),observed=b.tasks[0].observedAt;b.tasks[0].manualStatus={state:'completed',version:1,source:'owner_manual'};const root=setup();renderProjectClarity(root,b,null,{now,taskState:'completed'});assert.equal(nodes(root,'pc-task').length,1);assert.match(nodes(root,'pc-status')[0].textContent,/已完成手动/);assert.equal(b.tasks[0].state,'partial');assert.equal(b.tasks[0].observedAt,observed);});
@@ -111,3 +113,96 @@ test('manual completed renders old blocker and next step only under collapsed hi
  assert.equal(nodes(root,'pc-blocker').length,0);assert.equal(nodes(root,'pc-history').length,1);const history=nodes(root,'pc-history')[0];assert.notEqual(history.open,true);assert.match(history.textContent,/原卡点/);assert(history.textContent.includes(task.nextAction));assert.equal(nodes(root,'pc-next')[0].textContent,'状态备注'+task.manualStatus.reason);assert.deepEqual(b,before);
 });
 test('inspector consumes the same current arrangement and history projection',async()=>{const source=await readFile(new URL('../public/app.js',import.meta.url),'utf8'),inspector=source.slice(source.indexOf('function taskInspector'),source.indexOf('function taskInspector')+7000);assert.match(inspector,/clarity\.stopped\|\|clarity\.manualCompleted/);assert.match(inspector,/renderTaskHistory\(fragment,clarity\.history\)/);assert.doesNotMatch(inspector,/text\(task\.blocker\)|text\(task\.nextAction\)/);});
+
+test('business counts exclude canceled history without private task-ID exceptions',()=>{
+ const b=input();b.tasks.push({id:'old',project:'History',title:'Canceled history',state:'canceled'}, {id:'synthetic-secondary-task',project:'Environment check',title:'Auxiliary check',state:'blocked'});b.projects.push('History','Environment check');
+ const before=structuredClone(b),root=setup();renderProjectClarity(root,b,null,{now});
+ assert.deepEqual(presentationScope(b),{registeredTasks:3,registeredProjects:4,businessTasks:2,businessProjects:2,historicalTasks:1,auxiliaryTasks:0});
+ assert.equal(taskPresentationKind(b.tasks[2]),'business');assert.equal(projectPresentationKind(b,'History'),'history');assert.equal(projectPresentationKind(b,'Alpha'),'business');
+ assert.equal(nodes(root,'pc-task').length,3);assert.match(root.textContent,/2 个有效业务项目 · 2 项业务任务/);assert.match(root.textContent,/历史记录/);assert.deepEqual(b,before);
+});
+test('manual completion and original pauses survive presentation classification',()=>{
+ const b=input();b.tasks[0].manualStatus={state:'completed',version:1,source:'owner_manual'};b.tasks.push({id:'paused',title:'Paused',project:'Alpha',state:'paused'});
+ const root=setup();renderProjectClarity(root,b,null,{now});assert.equal(presentationScope(b).businessTasks,2);assert.equal(taskClarity(b.tasks[0],b,null,now).status,'已完成');assert.equal(taskClarity(b.tasks[1],b,null,now).status,'已暂停');
+});
+test('missing and stale activity observations remain explicit rather than a zero-running assertion',()=>{
+ const root=setup(),b=input();b.agents[0].activity.observedAt='2026-10-01T00:00:00Z';b.tasks[0].observedAt='2026-10-01T00:00:00Z';renderProjectClarity(root,b,null,{now});
+ assert.match(root.textContent,/Agent 活动观察已过期/);assert.match(root.textContent,/Agent 当前活动未核实/);assert.match(root.textContent,/观察已过期，当前进展待核实/);assert.doesNotMatch(root.textContent,/0 位正在执行|0 个正在执行/);
+ assert.equal(ownerObservationLabel({},now),'Agent 当前活动未核实');b.tasks[0].observedAt=null;renderProjectClarity(root,b,null,{now});assert.match(root.textContent,/观察时间未记录/);
+ b.tasks[0].manualStatus={state:'completed',version:1,source:'owner_manual'};renderProjectClarity(root,b,null,{now});assert.match(root.textContent,/手动完成决定保持/);assert.equal(taskClarity(b.tasks[0],b,null,now).displayState,'completed');
+});
+test('registered wording never claims that every imported task was verified',async()=>{
+ const app=await readFile(new URL('../public/app.js',import.meta.url),'utf8'),html=await readFile(new URL('../public/index.html',import.meta.url),'utf8');
+ assert.doesNotMatch(app,/项已核对任务/);assert.match(app,/项登记任务/);assert.match(html,/已登记项目与任务/);assert.match(app,/本页队列不会自行执行/);assert.match(app,/另行配置并授权的 dot 检查沿原任务推进/);assert.match(app,/本地自动派发仍待验收/);assert.doesNotMatch(app,/自动唤醒与续跑尚未接通/);
+});
+
+
+test('default business projection archives cancellations and retains other task identities',()=>{
+ const b=input();b.tasks.push({id:'old',project:'History',title:'Canceled history',state:'canceled'}, {id:'synthetic-secondary-task',project:'Environment check',title:'Auxiliary check',state:'blocked'});b.projects.push('History','Environment check');const before=structuredClone(b);
+ const current=presentationBoard(b),archive=presentationBoard(b,true);assert.deepEqual(current.tasks.map(t=>t.id),['a','synthetic-secondary-task']);assert.deepEqual(current.projects,['Alpha','Environment check']);assert.deepEqual(archive.tasks.map(t=>t.id),['old']);assert.equal(archive.tasks[0],b.tasks[1]);assert.deepEqual(b,before);
+ const root=setup();renderProjectClarity(root,current,null,{now,recordScope:'business'});assert.doesNotMatch(root.textContent,/Canceled history/);assert.match(root.textContent,/Auxiliary check/);assert.equal(nodes(root,'pc-task').length,2);
+ renderProjectClarity(root,archive,null,{now,recordScope:'archive'});assert.equal(nodes(root,'pc-task').length,1);assert.match(root.textContent,/归档历史 · 1 项记录/);
+});
+test('business and archive switch is local presentation only and starts in business scope',async()=>{
+ const app=await readFile(new URL('../public/app.js',import.meta.url),'utf8'),html=await readFile(new URL('../public/index.html',import.meta.url),'utf8');assert.match(app,/recordScope:'business'/);assert.match(html,/id="record-scope" class="record-scope-select"/);assert.doesNotMatch(html,/id="record-scope" class="mobile-project"/);assert.match(app,/const extra=visibleBoard\(\)/);assert.match(app,/clarityBoard\(visibleBoard\(\)\)/);
+});
+
+test('empty inbox discloses its narrow lifecycle scope without completing projects',()=>{
+ const root=setup(),value={requests:[],unreadCount:0,pendingCount:0},before=structuredClone(value);
+ renderRequestInbox(root,value);
+ assert.match(root.textContent,/不含已分派、处理中、受阻记录/);
+ assert.match(root.textContent,/收件箱为空不代表项目全部完成/);
+ assert.match(nodes(root,'inbox-empty')[0].textContent,/当前收件范围/);
+ assert.match(nodes(root,'inbox-empty')[0].textContent,/项目和执行队列/);
+ assert.deepEqual(value,before);
+ assert.equal(nodes(root,'inbox-open').length,0);
+});
+
+
+test('stale synthetic import preserves the original version and totals under an explicit historical source label',()=>{
+ const b=input(),task=b.tasks[0];Object.assign(task,{id:'synthetic-history-task',project:'Synthetic board',observedAt:'2026-10-08T04:54:05Z',observation:'示例旧版 v2 导入记录：4项目、6任务、3名负责人。',assignedAgentIds:[]});b.projects=[task.project];b.agents=[];
+ const before=structuredClone(b),root=setup();renderProjectClarity(root,b,null,{now});const progress=nodes(root,'pc-progress')[0];
+ assert.equal(progress.children[0].textContent,'历史导入记录');assert.match(progress.textContent,/不代表当前部署统计/);assert.match(progress.textContent,/也不是自动接续验收结果/);
+ assert.equal(nodes(progress,'pc-copy')[0].textContent,task.observation);assert.match(progress.textContent,/v2.*4项目、6任务、3名/);assert.doesNotMatch(progress.textContent,/最新进展|当前版本 v99/);
+ assert.equal(nodes(root,'pc-status')[0].textContent,'部分完成');assert.equal(nodes(root,'pc-task')[0].dataset.taskId,'synthetic-history-task');assert.deepEqual(b,before);
+});
+
+test('historical source label applies to stale evidence across project identities and preserves manual decisions',()=>{
+ for(const variant of ['fresh-dot','unknown-dot','future-dot','other-project','manual-completed','paused']){
+  const b=input(),task=b.tasks[0];task.id='synthetic-history-task';task.observedAt='2026-10-08T04:54:05Z';
+  if(variant==='fresh-dot')task.observedAt='2026-10-08T10:59:00Z';if(variant==='unknown-dot')task.observedAt=null;if(variant==='future-dot')task.observedAt='2026-10-08T14:00:00Z';if(variant==='other-project')task.id='synthetic-other-task';
+  if(variant==='manual-completed')task.manualStatus={source:'owner_manual',state:'completed',version:1,reason:'Owner completed this bounded step.'};if(variant==='paused')task.state='paused';
+  const before=structuredClone(b),root=setup();renderProjectClarity(root,b,null,{now});const historical=['other-project','manual-completed','paused'].includes(variant);
+  assert.equal(nodes(root,'pc-progress')[0].children[0].textContent,historical?'历史导入记录':'最新进展');
+  if(variant==='manual-completed')assert.equal(nodes(root,'pc-status')[0].textContent,'已完成手动');if(variant==='paused')assert.equal(nodes(root,'pc-status')[0].textContent,'已暂停');assert.deepEqual(b,before);
+ }
+});
+
+test('existing task demand remains visible separately from an empty intake',()=>{
+ const b=input();b.tasks[0].goal='Preserve the original application workflow';b.tasks[0].acceptanceCriteria='Read back the actual result';const before=structuredClone(b),root=setup();let selected;
+ renderProjectClarity(root,b,null,{now,onTask:id=>selected=id});const demand=nodes(root,'pc-demand')[0];
+ assert.equal(demand.dataset.sourceKind,'task-record');assert.match(demand.textContent,/既有任务需求/);assert(demand.textContent.includes(b.tasks[0].goal));assert(demand.textContent.includes(b.tasks[0].acceptanceCriteria));assert(root.textContent.includes(b.tasks[0].nextAction));
+ nodes(root,'pc-task-title')[0].click();assert.equal(selected,b.tasks[0].id);assert.deepEqual(b,before);
+ const inbox=setup();renderRequestInbox(inbox,{requests:[],pendingCount:0,unreadCount:0});assert.match(inbox.textContent,/既有任务的目标、完成标准与下一步/);assert.match(inbox.textContent,/无需在这里重复提交/);
+});
+test('missing task demand fields remain explicitly unrecorded without inventing goals',()=>{
+ const b=input(),before=structuredClone(b),root=setup();renderProjectClarity(root,b,null,{now});const demand=nodes(root,'pc-demand')[0];assert.match(demand.textContent,/目标：尚未记录/);assert.match(demand.textContent,/完成标准：尚未记录/);assert(!demand.textContent.includes(b.tasks[0].observation));assert.deepEqual(b,before);
+});
+test('existing demand display preserves stopped decisions and never restores an old next step',()=>{
+ for(const state of ['paused','canceled']){const b=input();b.tasks[0].state=state;b.tasks[0].goal='Historical requested outcome';b.tasks[0].nextAction='Resume and publish now';const before=structuredClone(b),root=setup();renderProjectClarity(root,b,null,{now});assert.match(nodes(root,'pc-demand')[0].textContent,/Historical requested outcome/);assert.doesNotMatch(root.textContent,/Resume and publish now/);assert.deepEqual(b,before);}
+});
+test('empty project intake describes only new feedback, not absence of existing task needs',async()=>{
+ const source=await readFile(new URL('../public/app.js',import.meta.url),'utf8'),html=await readFile(new URL('../public/index.html',import.meta.url),'utf8');const root=setup(),byId=new Map(),get=id=>{if(!byId.has(id))byId.set(id,root.ownerDocument.createElement('section'));return byId.get(id);};
+ const rendering=source.slice(source.indexOf('function renderRequestHistory(){'),source.indexOf('async function loadRequestDetail'));
+ vm.runInNewContext(rendering+'\nrenderRequestHistory();',{$:get,requestProject:()=>({id:'existing-project'}),historyFor:()=>({loaded:true,requests:[],loading:false}),intake:{capabilities:{storageAvailable:true},details:new Map()},el:(tag,cls,text)=>{const node=root.ownerDocument.createElement(tag);node.className=cls;node.textContent=text;return node;}});
+ assert.match(get('request-list').textContent,/暂无新增需求\/反馈记录/);assert.match(get('request-list').textContent,/已有目标、完成标准与下一步仍在项目任务中/);assert.match(html,/本项目新增需求 \/ 反馈记录/);assert.match(html,/已有任务需求在项目卡片中查看，无需重复填写/);
+});
+
+test('quick status distinguishes reading from saving without changing the task',()=>{
+ for(const [loading,saving,label] of [[true,false,'读取中…'],[false,true,'保存中…'],[false,false,'部分完成']]){
+  const root=setup(),board=input(),before=structuredClone(board);let writes=0;
+  const controller={get:()=>({loading,saving,data:null,error:'',message:'',submission:null}),quickSave:()=>{writes++;}};
+  renderProjectClarity(root,board,null,{now,statusController:controller});const select=nodes(root,'pc-status-select')[0];
+  assert.equal(select.children[0].textContent,label);assert.equal(select.disabled,loading||saving);assert.equal(writes,0);assert.deepEqual(board,before);
+ }
+});

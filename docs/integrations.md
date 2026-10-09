@@ -10,6 +10,32 @@ For a new private online board, follow [Sites deployment](sites-deployment.md). 
 
 Source code and synthetic tests exist for these interfaces, but cloning the repository does not connect a native execution host or start automatic work. Direct Events delivery and the scheduled drain are disabled by the current Sites entry. Its separate relay bridge requires independent private configuration and verification; leave it out of a standard installation.
 
+## Scheduled dot continuation
+
+The maintainer's online deployment completed a bounded two-cycle acceptance on 2026-10-09: a natural scheduled wake continued the same native online task, performed a real presentation fix, ran tests, published it and read the result back; the next natural wake only checked the finished result and did not repeat the write. This verifies that host-native continuation path. It does not verify local-computer dispatch, the cloud_threads request/job chain, all projects, or an external callback transport.
+
+A Sites server does not need to invoke cloud_threads directly for this workflow. The scheduled check runs in the user's authorized dot session, which must have access to the original task and the required native tools. A hosted page refresh or a copied configuration flag cannot supply those capabilities. The repository does not create or resume schedules on installation.
+
+### Configure with your own dot
+
+1. Deploy your own private board and verify the existing authenticated read/write interfaces. Identify one real unfinished online task and its original executor using your own account. Never copy the maintainer's private mappings or substitute another project.
+2. Explicitly authorize the selected work and the check's schedule. Reuse a suitable existing check; leave canceled projects and paused schedules unchanged unless you specifically resume them. If scheduling or original-task access is missing, report that exact missing capability rather than inventing an endpoint or binding.
+3. The check reads current state before acting. If an original executor is still working, follow it without sending duplicate work. If a bounded step is finished but another authorized step remains and no writer is active, continue the same original task once through the supported native capability. Preserve user pause/cancel/completion decisions. An UNKNOWN result is reconciled read-only, never automatically resent or released.
+4. Read actual tool/output evidence, record the finished scope and remaining checks, and read back any permitted status write. A missing board observation binding is not permission to create one or pretend a callback was saved. The original task's own receipt may document the bounded step while the project's board state remains incomplete.
+
+A suggested instruction for your own dot:
+
+> For the online task I have explicitly selected, use my authorized scheduled check to read the original task, continue an unfinished allowed step only when no executor is active, and verify the actual result. Preserve stopped tasks, use the same original executor, and do not retry unknown sends. Record what completed and what remains. Do not treat one substep as the whole project's completion or turn this into permission to resume my other projects.
+
+### Accept the actual path
+
+- Keep the natural schedule-trigger receipt; a manual Run now is a manual trigger and must be labeled accordingly.
+- Correlate the same original task with actual execution, the durable result and the readback. Admission alone is insufficient.
+- At the next natural check, verify that the completed step is not dispatched or written again.
+- Claim only the path exercised. Native collaboration continuation and cloud_threads request-dispatch are different paths. Complete the latter's existing request/version/claim/preflight/binding/terminal protocol separately before claiming it works.
+
+No new credentials, permission expansion or changes to execution guards are included in this update. Checkpoint, cancellation, TTL and uncertain-result rules remain unchanged.
+
 ## Authenticated request intake
 
 The server stores a request only after checking the project, owner, payload limits and referenced context. The saved receipt is the source of truth; text in a browser draft is not a server save. Browser drafts are scoped to the current tab's session storage.
@@ -81,3 +107,7 @@ Declare exclusive resources on enqueue as `resources: [{kind, id}]`; supported k
 Trusted hosts can persist known task mappings with `service.registerBinding(owner, {taskId, projectId, threadId, environment, verified: true, evidence})`. Existing mappings cannot be reassigned. Reconnect uses the original environment and thread; repeated enqueue receipts preserve the original task number. `service.preflight(owner, job)` and MCP `preflight_dispatch_execution` recheck current policy, intent version and lease ownership immediately before invocation. The host must treat any failed check as no permission to execute. There is no distributed atomic transaction between the final policy read and an external native call; an already-started writer requires a cooperative safe checkpoint, never a forced kill.
 
 These APIs are plumbing for an explicitly authorized host. The repository does not infer private project pauses from natural-language history, register all projects, or install live policies. Set every paused work category in private runtime configuration before enabling execution. Local fixtures provide synthetic verification only.
+
+## Existing task requirements
+
+Owner-private Sites can persist `goal` and `acceptanceCriteria` for an existing task through `GET/POST /api/tasks/:taskId/requirements`, or `get_task_requirements` and `record_task_requirements`. Apply the complete schema chain first. Updates use an independent expected version and idempotent event ID; per-field source references are retained. The calling host must verify those references. Text never grants execution permission, creates a request, changes task identity or releases a queue reservation. The existing task detail exposes the editor only when `/api/config` reports `requirementsEnabled`. The default Node server, generic Worker and candidate do not inject this service and show the original task requirements without an editable form. A saved description is not automatic chat capture or dispatch.

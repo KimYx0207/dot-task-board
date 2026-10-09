@@ -42,11 +42,11 @@ npm run package:sites -- --hosting "/absolute/private/hosting.json" --out "/abso
 
 输出目录必须是仓库外尚不存在的新目录。命令先构建 `dist/sites/index.js`，再把私有入口放到部署所需的 `dist/server/index.js`。它不会覆盖通用 Worker 构建、连接账号或执行发布。私有托管文件只接受 `project_id`、`d1: "DB"` 和 `capabilities: ["mcp"]`，不接受运行时数据或凭据。
 
-产物目录包含 19 个文件：
+产物目录包含 21 个文件：
 
 - `dist/server/index.js`：所有者私有的 Sites 应用与界面资源
 - `dist/.openai/hosting.json`：本次安装自己的项目身份和逻辑能力
-- `dist/.openai/drizzle/`：8 条 SQL 迁移、8 个结构快照及迁移日志
+- `dist/.openai/drizzle/`：9 条 SQL 迁移、9 个结构快照及迁移日志
 
 完整源码仍是本仓库；构建产物是本次部署的私有文件。不能把产物或私有配置提交到 GitHub。使用平台支持的源码版本、打包和部署流程，将这个确切源码版本及私有产物发布到新 Site，并保持仅所有者访问。本地构建成功不等于新站已经上线。
 
@@ -54,7 +54,7 @@ npm run package:sites -- --hosting "/absolute/private/hosting.json" --out "/abso
 
 ## 3. 应用完整数据库结构
 
-Sites 使用未经改写的 `drizzle/` 日志、全部 8 条 SQL 与全部 8 个结构快照，打包命令会一并复制。迁移顺序如下：
+Sites 使用未经改写的 `drizzle/` 日志、全部 9 条 SQL 与全部 9 个结构快照，打包命令会一并复制。迁移顺序如下：
 
 1. `0000_project_intake`
 2. `0001_events_dispatch`
@@ -64,8 +64,9 @@ Sites 使用未经改写的 `drizzle/` 日志、全部 8 条 SQL 与全部 8 个
 6. `0005_board_observation_outbox`
 7. `0006_dispatch_manual_authorizations`
 8. `0007_manual_task_status`
+9. `0008_task_requirements`
 
-通过平台迁移机制应用到新安装的 `DB`，不能只跑前两条。独立的 `migrations/` 目录是普通 SQL/本地迁移链，编号 0000 至 0008；两条链不能重复应用到同一个数据库。升级已有站点需要单独备份和迁移审查，不能复制生产数据行或改写已经应用过的历史迁移。
+通过平台迁移机制应用到新安装的 `DB`，不能只跑前两条。独立的 `migrations/` 目录是普通 SQL/本地迁移链，编号 0000 至 0009；两条链不能重复应用到同一个数据库。升级已有站点需要单独备份和迁移审查，不能复制生产数据行或改写已经应用过的历史迁移。
 
 ## 4. 配置私有运行参数
 

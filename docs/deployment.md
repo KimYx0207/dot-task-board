@@ -63,6 +63,7 @@ For the current complete plain-SQL schema, a generic Worker needs a D1-compatibl
 7. `0006_board_observation_outbox.sql`
 8. `0007_dispatch_manual_authorizations.sql`
 9. `0008_manual_task_status.sql`
+10. `0009_task_requirements.sql`
 
 A complete schema does not enable every host-specific feature. **Sites deployments use the separate full Drizzle chain in [the online guide](sites-deployment.md), not these instructions.** Never apply both chains to the same database. Managed local installation applies its own plain-SQL migration chain; do not manually repeat it.
 

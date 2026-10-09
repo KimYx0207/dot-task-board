@@ -42,11 +42,11 @@ npm run package:sites -- --hosting "/absolute/private/hosting.json" --out "/abso
 
 The output directory must be new and outside the source checkout. The command builds `dist/sites/index.js`, then stages the private entry at the deployment path `dist/server/index.js`. It does not overwrite the public build, connect an account or deploy anything. It accepts only `project_id`, `d1: "DB"` and `capabilities: ["mcp"]` in the private hosting file; runtime data and credentials are rejected.
 
-The staged directory contains 19 files:
+The staged directory contains 21 files:
 
 - `dist/server/index.js`: the owner-private Sites application and UI assets
 - `dist/.openai/hosting.json`: your installation's project identity and logical capabilities
-- `dist/.openai/drizzle/`: eight SQL migrations, eight schema snapshots and the journal
+- `dist/.openai/drizzle/`: nine SQL migrations, nine schema snapshots and the journal
 
 The full application source remains this repository; the staged build is a private deployment artifact. Do not commit it or upload your private configuration to GitHub. Use your supported Sites packaging/version/deployment flow with this exact source revision and private output. Preserve owner-only access. A successful local build does not establish that a new Site has deployed.
 
@@ -54,7 +54,7 @@ The `package:sites` command is the current online packaging path. Other build ta
 
 ## 3. Apply the complete database schema
 
-For Sites, retain the unchanged `drizzle/` journal, all eight SQL files and all eight snapshots. They are bundled by the staging command. The migration chain is:
+For Sites, retain the unchanged `drizzle/` journal, all nine SQL files and all nine snapshots. They are bundled by the staging command. The migration chain is:
 
 1. `0000_project_intake`
 2. `0001_events_dispatch`
@@ -64,8 +64,9 @@ For Sites, retain the unchanged `drizzle/` journal, all eight SQL files and all 
 6. `0005_board_observation_outbox`
 7. `0006_dispatch_manual_authorizations`
 8. `0007_manual_task_status`
+9. `0008_task_requirements`
 
-Use the platform's migration mechanism against the new installation's `DB`. Do not apply only the first two files. The separate `migrations/` directory is the plain-SQL/local chain, numbered 0000 through 0008; do not apply both chains to the same database. Existing installations need their own backup and migration review; packaging must not copy production rows or rewrite previously applied migrations.
+Use the platform's migration mechanism against the new installation's `DB`. Do not apply only the first two files. The separate `migrations/` directory is the plain-SQL/local chain, numbered 0000 through 0009; do not apply both chains to the same database. Existing installations need their own backup and migration review; packaging must not copy production rows or rewrite previously applied migrations.
 
 ## 4. Configure private runtime values
 
