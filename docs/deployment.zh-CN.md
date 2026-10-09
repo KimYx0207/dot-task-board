@@ -2,6 +2,8 @@
 
 [English](deployment.md) · [简体中文](deployment.zh-CN.md)
 
+本项目的主要在线形态请先阅读[部署自己的在线 Site](sites-deployment.zh-CN.md)，其中明确了 Sites 专用入口、完整表结构、所有者身份和私有部署产物。下文是可选替代运行模式；通用 Worker 不能替代完整的私有 Sites 适配器。
+
 ## 选择运行模式
 
 | 模式 | 要求 | 能力 |
@@ -54,6 +56,8 @@ node --check dist/server/index.js
 
 1. [0000_project_intake.sql](../migrations/0000_project_intake.sql) 创建需求和回执事件存储
 2. [0001_events_dispatch.sql](../migrations/0001_events_dispatch.sql) 添加实验性队列和 Events 存储
+
+这些功能还需要完整普通 SQL/本地链中的 `0002_execution_evidence.sql`、`0003_dispatch_guards.sql`、`0004_native_dispatch_journal.sql`、`0005_board_observations.sql`、`0006_board_observation_outbox.sql`、`0007_dispatch_manual_authorizations.sql`、`0008_manual_task_status.sql`。Sites 应使用[在线指南](sites-deployment.zh-CN.md)中的独立完整 Drizzle 链，不能将两条链重复应用到同一数据库。
 
 使用宿主官方支持的迁移工具，确认实际修改的数据库，升级前备份已有数据。仓库已经包含普通 SQL，运行时不需要模式生成器。缺少表会关闭对应能力；不能仅凭健康检查就宣称需求通道已经可用。
 

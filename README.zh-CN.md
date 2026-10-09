@@ -8,17 +8,17 @@
 
 [English](README.md) · [简体中文](README.zh-CN.md)
 
-[快速开始](#3-步上手) · [交给 Agent 安装](INSTALL.zh-CN.md) · [文档导航](#文档导航) · [参与贡献](CONTRIBUTING.zh-CN.md) · [MIT 许可](LICENSE)
+[快速开始](#3-步上手) · [交给自己的 dot 部署](docs/sites-deployment.zh-CN.md) · [文档导航](#文档导航) · [参与贡献](CONTRIBUTING.zh-CN.md) · [MIT 许可](LICENSE)
 
 </div>
 
-**0.2.0-rc.1 源码预发布版：**可独立安装的项目看板，包含本地持久化需求回执、手动状态展示与可选宿主接入接口。原生自动执行和自动续跑尚未完成开箱即用验收。
+**把这个 GitHub 地址发给自己的 dot，让它为你部署属于自己的私有在线 Site。** 仓库包含线上看板、手动状态、需求、队列与观察服务源码；需要你自己的 Sites 平台权限和身份/数据配置。原生自动执行与自动续跑仍未验收。
 
 ## 从这里开始
 
 多个 Agent 同时处理不同项目时，你需要的不只是一张任务清单：每个项目包含什么、谁在负责、哪里卡住，以及这些状态究竟是什么时候观察到的。
 
-**dot task board 把明确导出的任务和 Agent 记录，变成以项目为主入口的工作台。** 它可以用 Node.js 独立运行，没有第三方运行时依赖。可选的认证需求通道，将需求保存、已读确认和推进回执与状态快照分别记录。
+**dot task board 把明确导出的任务和 Agent 记录，变成以项目为主入口的工作台。** 主要使用形态是浏览器打开的私有在线 Site。Node.js 用于构建与开发，查看在线站点的人不需要在本机运行它。可选的认证需求通道，将需求保存、已读确认和推进回执与状态快照分别记录。
 
 | 你想知道什么 | 看板会展示什么 |
 | --- | --- |
@@ -45,43 +45,27 @@
 
 ### 3 步上手
 
-使用 **Node.js 24 或更新版本**，无须执行 `npm install`。
+1. 把 `https://github.com/KimYx0207/dot-task-board` 发给自己的 dot。
+2. 告诉它按下面的说明，部署“属于你自己的、仅所有者可访问的在线 Site”。如确实需要平台权限或账号确认，再按提示完成。
+3. dot 确认新站部署成功、所有者访问检查通过后，打开它给你的新网址。先用合成数据验收，再接入你自己的获准记录。
 
-1. 获取源码：
+可直接复制给自己的 dot：
 
-   ```sh
-   git clone https://github.com/KimYx0207/dot-task-board.git
-   cd dot-task-board
-   ```
+> 读取 https://github.com/KimYx0207/dot-task-board 及 docs/sites-deployment.zh-CN.md，按你当前支持的 Sites 构建托管流程，为我部署属于自己的、仅所有者可访问的在线任务看板。保留作者的四个公开入口：个人主页 aiking.dev、X @KimYx0207、GitHub KimYx0207、微信公众号“老金带你玩AI”。我的身份、项目数据、线程映射和凭据必须保持私有。使用 Sites 专用构建、完整 D1 结构，以及我这个新 Site 的可信所有者身份。先用合成数据完成部署和所有者访问检查，再给我自己的 Site 网址。如果缺少平台权限或站点专用身份配置方式，请准确告诉我缺哪一步。不要把本机预览或尚未验收的执行接入当成在线站点已交付。
 
-2. 启动合成示例：
+仓库不能替你取得平台权限，也不能复制原作者的私有账号。当前已验证构建与打包契约，但还未用独立用户账号走完真实新站部署。[具体部署条件与剩余边界](docs/sites-deployment.zh-CN.md)都有列明。
 
-   ```sh
-   npm run demo
-   ```
+### 开发者可选：本机预览
 
-3. 打开 `http://127.0.0.1:4317`，或终端显示的地址。选择项目，再点击任务或 Agent，查看观察记录和成果证据。
-
-示例使用虚构记录，每次运行新建临时 SQLite 数据库来保存本地需求回执，并提供队列工具用于合成测试。它不连接真实账号，也不启动真实 Agent；重新启动演示会创建新的临时数据库。
-
-### 接入自己的数据
-
-参考[完整示例](examples/synthetic-snapshot.json)和[数据契约](docs/data-contract.zh-CN.md)，准备脱敏后的快照。真实数据必须保存在仓库之外。
-
-macOS / Linux：
+只想在本机查看界面时，使用 Node.js 24+，无需 `npm install`：
 
 ```sh
-DOT_BOARD_SNAPSHOT_PATH=/absolute/path/outside-repo/snapshot.json npm start
+git clone https://github.com/KimYx0207/dot-task-board.git
+cd dot-task-board
+npm run demo
 ```
 
-PowerShell：
-
-```powershell
-$env:DOT_BOARD_SNAPSHOT_PATH = 'C:\private-data\snapshot.json'
-npm start
-```
-
-服务只监听 `127.0.0.1`。通过 `DOT_BOARD_PORT` 修改默认端口 `4317`。没有配置数据源时，看板会显示“未接入”，不会悄悄换成演示数据。[`.env.example`](.env.example) 用于说明配置项，程序不会自动加载 `.env` 文件。
+终端显示的 `http://127.0.0.1:4317` 是临时本机示例地址，不是为你新部署的在线 Site。示例使用虚构数据，不连接账号，不启动真实 Agent。也可用 `DOT_BOARD_SNAPSHOT_PATH=/absolute/private/snapshot.json npm start` 读取本地快照。持久化本地安装、PowerShell 等细节见 [INSTALL.zh-CN.md](INSTALL.zh-CN.md)。
 
 ## 当前能力
 
@@ -100,7 +84,7 @@ npm start
 
 ### 本次源码验证结果
 
-2026-10-09，使用 Node.js 24.19.0 在整合源码和便携包全新解压目录各运行 **649 项测试，全部通过，零失败、零跳过**；219 个源码文件摘要全部一致。公共、候选、所有者私有三种构建、编译语法及私有观察通道的合成检查通过。干净本地安装已验证静态资源、需求持久化、幂等重试、停止与重启。
+2026-10-09，使用 Node.js 24.19.0 在整合源码和便携包全新解压目录各运行 **652 项测试，全部通过，零失败、零跳过**；224 个源码文件摘要全部一致。公共、候选、所有者私有三种构建、编译语法及私有观察通道的合成检查通过。干净本地安装已验证静态资源、需求持久化、幂等重试、停止与重启。
 
 当前预览环境无法把本地候选页面提供给浏览器，因此本次源码的浏览器视觉验收与真实设备验收未完成，自动化界面契约测试不能替代它们。真实插件连接、原生自动执行、自动续跑和真实外部回调交付仍未验收。
 
@@ -108,6 +92,7 @@ npm start
 
 | 接下来读什么 | 内容 |
 | --- | --- |
+| [在线 Sites 部署](docs/sites-deployment.zh-CN.md) | 把仓库交给自己的 dot，部署自己的私有在线 Site |
 | [架构说明](docs/architecture.zh-CN.md) | 组件、职责与信任边界 |
 | [数据契约与 HTTP 接口](docs/data-contract.zh-CN.md) | 快照字段、项目 ID、路由与 MCP 工具 |
 | [安装说明](INSTALL.zh-CN.md) · [部署说明](docs/deployment.zh-CN.md) | 本地运行、可选 Worker/D1 托管和访问控制 |

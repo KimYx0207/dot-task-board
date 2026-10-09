@@ -25,6 +25,7 @@
     "start:local": "node local.mjs",
     "pretest": "node scripts/build.mjs && node scripts/build.mjs --candidate && node scripts/build.mjs --sites",
     "build:candidate": "node scripts/build.mjs --candidate",
-    "build:sites": "node scripts/build.mjs --sites"
+    "build:sites": "node scripts/build.mjs --sites",
+    "package:sites": "node scripts/package-sites.mjs"
   }
 }

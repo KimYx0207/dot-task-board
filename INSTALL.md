@@ -2,7 +2,9 @@
 
 [English](INSTALL.md) · [简体中文](INSTALL.zh-CN.md)
 
-This guide is for a person or assistant installing dot task board from its repository link. A successful install means the selected version runs and its local functions were checked. It does not mean a hosted account, plugin, webhook or native worker is connected.
+This repository is primarily deployed as an owner-private online Site. If the user gives you the GitHub URL and asks for their own board, follow [Online Sites deployment](docs/sites-deployment.md) using the currently supported Sites workflow. Return their own verified hosted URL, and preserve the four public author header entries. Platform access, the new Site-specific owner identity, D1 and private runtime data must belong to that installation.
+
+The remaining sections describe the **optional local preview/install**. Do not substitute a loopback URL for a requested online Site. A local test pass does not verify a live deployment or execution integration.
 
 ## 1. Check the source and environment
 

@@ -2,6 +2,8 @@
 
 [English](deployment.md) · [简体中文](deployment.zh-CN.md)
 
+For the primary online product, start with [Deploy your own online Site](sites-deployment.md). That guide selects the Sites-specific entry, full schema, owner identity and private deployment artifact. The modes below are optional alternatives; a generic Worker is not a substitute for the full private Sites adapter.
+
 ## Choose a mode
 
 | Mode | Requirements | What it does |
@@ -54,6 +56,8 @@ A Worker with persistent intake needs a D1-compatible database bound as `DB`. Ap
 
 1. [0000_project_intake.sql](../migrations/0000_project_intake.sql) creates request and receipt-event storage
 2. [0001_events_dispatch.sql](../migrations/0001_events_dispatch.sql) adds experimental queue and Events storage
+
+The full plain-SQL/local chain also requires `0002_execution_evidence.sql`, `0003_dispatch_guards.sql`, `0004_native_dispatch_journal.sql`, `0005_board_observations.sql`, `0006_board_observation_outbox.sql`, `0007_dispatch_manual_authorizations.sql` and `0008_manual_task_status.sql` for those features. For Sites, use the separate complete Drizzle chain in [the online guide](sites-deployment.md); never apply both chains to the same database.
 
 Use the host's documented migration tooling, record which database is being changed, and back up existing data before an upgrade. The plain SQL is checked in; a schema generator is not a runtime requirement. A missing table disables the corresponding capability; do not announce intake as ready from process health alone.
 

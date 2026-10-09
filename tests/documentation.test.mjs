@@ -5,7 +5,7 @@ import {readFile,stat,readdir} from 'node:fs/promises';
 import {fileURLToPath} from 'node:url';
 import {dirname,resolve,relative,sep} from 'node:path';
 const root=fileURLToPath(new URL('../',import.meta.url));
-const pairs=['README','CONTRIBUTING','SECURITY','CHANGELOG','THIRD_PARTY','docs/architecture','docs/data-contract','docs/deployment','INSTALL','docs/integrations'];
+const pairs=['README','CONTRIBUTING','SECURITY','CHANGELOG','THIRD_PARTY','docs/architecture','docs/data-contract','docs/deployment','docs/sites-deployment','INSTALL','docs/integrations'];
 const read=p=>readFile(resolve(root,p),'utf8');
 
 test('documentation has separate complete English and Chinese entry points',async()=>{

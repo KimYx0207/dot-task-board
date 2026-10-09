@@ -4,6 +4,14 @@
 
 ## 0.2.0-rc.1 — 2026-10-09 (source prerelease)
 
+### Online Site deployment handoff
+
+- Make “give the repository to your own dot, then receive your own private Site URL” the primary installation flow; local preview is optional.
+- Preserve the four public author header entries: aiking.dev, X, GitHub and WeChat Official Account.
+- Document the actual Sites-only entry, platform access, Site-specific owner ID, full D1 schema and private runtime configuration. A generic Worker is not the equivalent private Site.
+- Add `package:sites` to stage the private bundle and all 19 required deployment files without deploying or embedding runtime data. Add three packaging regression tests.
+- Latest source validation: 224 files and 652 passing tests; the compiled-boundary suite remains 18 tests. A separate user's first real Sites deployment and browser/real-device acceptance remain unverified.
+
 ### 2026-10-09 — portable manual-status display consistency
 
 - Keep owner-manual completion separate from observed task state, execution evidence and business acceptance.
@@ -11,7 +19,7 @@
 - Include the shared display module in local, public Worker, candidate and owner-private Sites assets.
 - Retain separate public and owner-private build outputs and read-only manual-status fallback when no trusted host service is configured.
 
-Validation: Node.js 24.19.0; 219 source files; 649/649 tests passed with zero skips in the integrated source and clean archive. All three builds, compiled syntax, synthetic owner-private observation checks, managed local installation, request persistence, idempotent retries and stop/restart passed. No dependency installation is required.
+Validation: Node.js 24.19.0; 224 source files; 652/652 tests passed with zero skips in the integrated source and clean archive. All three builds, compiled syntax, synthetic owner-private observation checks, managed local installation, request persistence, idempotent retries and stop/restart passed. No dependency installation is required.
 
 This is still a prerelease. Browser visual and real-device acceptance were not completed because of the available preview environment. Live plugin connection, native automatic execution, automatic continuation and real external callback delivery remain unverified.
 

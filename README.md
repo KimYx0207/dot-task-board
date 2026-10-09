@@ -8,17 +8,17 @@
 
 [English](README.md) · [简体中文](README.zh-CN.md)
 
-[Quick start](#try-it-in-3-steps) · [Agent installation](INSTALL.md) · [Documentation](#documentation) · [Contributing](CONTRIBUTING.md) · [MIT](LICENSE)
+[Quick start](#try-it-in-3-steps) · [Deploy with your dot](docs/sites-deployment.md) · [Documentation](#documentation) · [Contributing](CONTRIBUTING.md) · [MIT](LICENSE)
 
 </div>
 
-**0.2.0-rc.1 source prerelease:** a portable project dashboard with persistent local request receipts, manual-status presentation and optional host integration interfaces. Native automatic execution and continuation are not an out-of-the-box verified feature.
+**Give this repository to your own dot to deploy your own private online Site.** The source includes the hosted dashboard, owner-manual status, requests, queue and observation services. Sites platform access and your own identity/data setup are required; native automatic execution and continuation remain unverified.
 
 ## Start here
 
 When several agents work across projects, you need more than a task list: what belongs to each project, who is working on it, what is blocked, and when that status was actually observed.
 
-**dot task board is a project-first dashboard for explicitly exported task and Agent records.** It runs locally with Node.js, without third-party runtime dependencies. Optional authenticated request intake keeps saved requests, read acknowledgements and progress receipts separate from the snapshot.
+**dot task board is a project-first dashboard for explicitly exported task and Agent records.** Its primary interface is an online, owner-private Site that you open in a browser. Node.js is a build/development requirement, not something viewers must run. Optional authenticated request intake keeps saved requests, read acknowledgements and progress receipts separate from the snapshot.
 
 | Your question | What the board shows |
 | --- | --- |
@@ -45,43 +45,27 @@ The interface currently uses Chinese labels. English and Simplified Chinese docu
 
 ### Try it in 3 steps
 
-Use **Node.js 24 or newer**. No `npm install` is needed.
+1. Send `https://github.com/KimYx0207/dot-task-board` to your own dot.
+2. Ask it to create **your own owner-private online Site** using the instructions below. Complete any platform access or account confirmations it genuinely needs.
+3. After dot confirms the new Site deployed and its owner-only checks passed, open your new hosted URL. Begin with synthetic data, then connect only your own authorized records.
 
-1. Get the source:
+Copy this request to your dot:
 
-   ```sh
-   git clone https://github.com/KimYx0207/dot-task-board.git
-   cd dot-task-board
-   ```
+> Read https://github.com/KimYx0207/dot-task-board and its docs/sites-deployment.md. Use your currently supported Sites build/deploy workflow to create my own owner-private online task board. Preserve the author's four public header entries: aiking.dev, X @KimYx0207, GitHub KimYx0207, and the WeChat Official Account 老金带你玩AI. Keep my identity, project data, thread mappings and credentials private. Use the Sites-specific build, complete D1 schema and my new Site's trusted owner identity. Start with synthetic data, verify deployment and owner access, and give me my own Site URL. If platform access or the Site-specific identity setup is unavailable, tell me exactly what is missing. Do not present a local preview or an unverified execution integration as a completed online installation.
 
-2. Start the synthetic demo:
+The repository cannot grant platform access or copy another person's private account. This new-account workflow has a verified build/packaging contract; an independent user's complete live deployment has not yet been tested. See [the exact deployment requirements and remaining boundary](docs/sites-deployment.md).
 
-   ```sh
-   npm run demo
-   ```
+### Optional local preview for developers
 
-3. Open `http://127.0.0.1:4317`, or the address printed in the terminal. Choose a project, then select a task or Agent to inspect its observations and evidence.
-
-The demo uses fictional records and a per-run temporary SQLite database for local request receipts. It includes queue tools for synthetic testing; no account is connected and no real agents are started. A fresh demo run creates a new temporary database.
-
-### Connect your own data
-
-Prepare a sanitized snapshot using the [example](examples/synthetic-snapshot.json) and [data contract](docs/data-contract.md). Keep real data outside this repository.
-
-macOS / Linux:
+If you only want to inspect the UI locally, use Node.js 24+; no `npm install` is needed:
 
 ```sh
-DOT_BOARD_SNAPSHOT_PATH=/absolute/path/outside-repo/snapshot.json npm start
+git clone https://github.com/KimYx0207/dot-task-board.git
+cd dot-task-board
+npm run demo
 ```
 
-PowerShell:
-
-```powershell
-$env:DOT_BOARD_SNAPSHOT_PATH = 'C:\private-data\snapshot.json'
-npm start
-```
-
-The server listens on `127.0.0.1`. Set `DOT_BOARD_PORT` to change port `4317`. Without an input source, the board shows that no feed is connected; it does not silently substitute demo data. [`.env.example`](.env.example) describes the settings; `.env` files are not loaded automatically.
+The printed `http://127.0.0.1:4317` address is a temporary local demo, not your new hosted Site. It uses fictional records, starts no real agents and does not connect accounts. For local snapshot input, `DOT_BOARD_SNAPSHOT_PATH=/absolute/private/snapshot.json npm start` remains available. Details, including persistent local setup and PowerShell commands, are in [INSTALL.md](INSTALL.md).
 
 ## Current scope
 
@@ -100,7 +84,7 @@ Saving a browser request does not start, resume, cancel or preempt a native work
 
 ### Verification of this source revision
 
-On 2026-10-09, Node.js 24.19.0 passed all **649 tests**, with zero failures or skips, both in the integrated source and a clean portable-archive extraction. All 219 source-file checksums matched. The public, candidate and owner-private builds, compiled syntax, and synthetic owner-private observation checks passed. A clean managed local install verified static asset loading, request persistence, idempotent retries, stop and restart.
+On 2026-10-09, Node.js 24.19.0 passed all **652 tests**, with zero failures or skips, both in the integrated source and a clean portable-archive extraction. All 224 source-file checksums matched. The public, candidate and owner-private builds, compiled syntax, and synthetic owner-private observation checks passed. A clean managed local install verified static asset loading, request persistence, idempotent retries, stop and restart.
 
 Browser visual acceptance and real-device acceptance for this revision were not completed because the available preview environment could not serve the local candidate to its browser. Automated UI-contract tests are not a substitute. Live plugin connection, native automatic execution, automatic continuation and real external callback delivery remain unverified.
 
@@ -108,6 +92,7 @@ Browser visual acceptance and real-device acceptance for this revision were not 
 
 | Read next | Purpose |
 | --- | --- |
+| [Online Sites deployment](docs/sites-deployment.md) | Give the repository to your dot; deploy your own owner-private Site |
 | [Architecture](docs/architecture.md) | Components, responsibilities and trust boundaries |
 | [Data contract and HTTP API](docs/data-contract.md) | Snapshot fields, project IDs, routes and MCP tools |
 | [Installation](INSTALL.md) · [Deployment](docs/deployment.md) | Local runtime, optional Worker/D1 hosting and access control |
