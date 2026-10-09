@@ -1,3 +1,4 @@
+import {sitesIdentitySetupResponse} from './sites-setup-identity.mjs';
 import {applySitesVisibility} from '../adapters/sites-visibility.mjs';
 import {createSitesManualTaskStatus} from './sites-manual-task-status.mjs';
 import {readObservationBindings} from '../adapters/observation-bindings.mjs';
@@ -17,6 +18,8 @@ import {createWorker} from '../../worker.mjs';
 export function createSitesPrivateEntry(assets={}){
  const worker=createWorker(assets,undefined,{projectQueueProjection:false,manualStatusFor:env=>createSitesManualTaskStatus(env),manualCheckFor:(env,services)=>createSitesManualCheck(env,services),taskControlsFor:env=>createSitesTaskControls(env),observationsFor:env=>createSitesObservations(env),readObservationSnapshot:async(snapshot,env,owner)=>{const controls=createSitesTaskControls(env),controlled=controls?await controls.overlay(owner,snapshot):snapshot,observations=createSitesObservations(env);const observed=observations?await observations.overlay(owner,controlled):controlled,manual=createSitesManualTaskStatus(env);return manual?manual.overlay(owner,observed):observed;}});
  return {async fetch(request,env={},ctx={}){
+  const setupPath=new URL(request.url).pathname;
+  if(setupPath==='/setup'||setupPath==='/api/setup/identity')return sitesIdentitySetupResponse(request,env);
   if(env.DOT_BOARD_INGRESS!=='sites-owner-private-v1'||typeof env.DOT_BOARD_OWNER_ID!=='string'||!env.DOT_BOARD_OWNER_ID||!env.DOT_BOARD_AUDIENCE)return Response.json({error:'owner_binding_unconfigured'},{status:503});
   // The stable Sites user ID is audience-bound to this Site. The configured
   // origin additionally rejects accidental use at a different deployment.

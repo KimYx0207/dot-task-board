@@ -28,6 +28,14 @@ Ordinary interface bugs can be reported publicly with synthetic reproductions. N
 
 See [deployment](docs/deployment.md) for setup boundaries and [optional integrations](docs/integrations.md) for experimental behavior. Local tests do not prove a production authentication or callback integration is safe.
 
+## First-install identity lookup
+
+The Sites-only `/setup` and `/api/setup/identity` routes are disabled unless `DOT_BOARD_IDENTITY_SETUP_ENABLED` is exactly `true`. They require the configured HTTPS Site origin and platform-authenticated visitor identity, return only that visitor's Site ID, and never access storage or assign an owner. Existing owner configuration closes the lookup. Other routes retain their original owner checks throughout installation.
+
+An authenticated visitor is not proof of Site ownership. The installing dot must verify the current owner and owner-only access through Sites management before enabling setup and before confirming the binding. The app does not receive a live sharing-policy attestation and cannot detect policy changes from the user header. Do not use the lookup on a public/shared deployment or behind an untrusted proxy. Never implement first-visitor ownership, copy another person's ID or use a service credential as a user identity. Follow the concrete [first-install sequence](docs/sites-deployment.md#first-installation-obtain-your-own-site-identity), including explicit runtime-configuration confirmation and closing setup afterward.
+
+Setup output is private and non-cacheable. Do not log, publish or place its ID in URLs; no password, service token, email or snapshot is returned. Local tests verify the application contract, not the live platform's identity injection or access policy.
+
 ## CI
 
 The workflow needs only `contents: read`; checkout does not retain write credentials. It has no `pull_request_target`, repository write permissions, secret inputs, production deployment, paid larger runners, cache or artifact upload.

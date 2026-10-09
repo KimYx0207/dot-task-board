@@ -23,9 +23,11 @@ Use your account's supported Sites creation/deployment tooling to create a new *
 
 Keep its returned project ID, origin and deployment configuration outside this public checkout. Start from [the logical hosting example](../config/hosting.sites.example.json), add the actual returned `project_id`, and save it to a private file. The example deliberately has no usable project identity.
 
-The application also needs the signed-in owner's **Site-specific** user ID for `DOT_BOARD_OWNER_ID`. Obtain this through the platform's trusted identity/setup process for the new Site. The ID differs across Sites: neither a general account ID, email address, browser-supplied header nor the original author's ID is a substitute. If your tooling does not expose a supported way to establish this binding, stop and resolve that setup gap; do not disable the owner check. This repository does not provide an automatic owner-enrollment endpoint.
+The application binds an owner using the signed-in user's **Site-specific** ID. Sites supplies it on authenticated requests; the management API's account ID is a different identifier. The new read-only `/setup` page obtains this value from the platform request after you enable temporary identity-setup mode below. It does not automatically claim the Site or make its visitor an owner.
 
-The existing adapter expects Sites to authenticate visitors, strip forged identity headers and inject `oai-authenticated-user-id`. Never expose that adapter through an ordinary public proxy that lets clients choose this header.
+Before enabling setup, the installing dot must call the supported `get_site` management operation for this exact new Site. Confirm that the current operator is its owner and that its audience contains only that owner: no public/workspace audience, extra viewers, groups or external grants. Use the actual returned access policy; if ownership or privacy cannot be established, stop and explain the missing check. Do not change access policy as an installation shortcut. This management check, not an application flag, establishes who owns the Site.
+
+The adapter must run only behind Sites' authenticated identity injection. Do not deploy it behind an ordinary proxy that accepts caller-supplied `oai-authenticated-user-id`. Neither email, a general account ID, the original author's ID nor a service-access token is a substitute. Sites service access does not supply a signed-in user identity.
 
 ## 2. Build and stage the online application
 
@@ -67,12 +69,30 @@ Use the platform's migration mechanism against the new installation's `DB`. Do n
 
 ## 4. Configure private runtime values
 
+### First installation: obtain your own Site identity
+
+The user only needs to give this repository to their dot and follow its sign-in/configuration prompts. They do not need to discover an ID or understand environment variables. The installing dot performs this sequence through the currently supported Sites tools:
+
+1. Recheck the exact Site's owner-private access in `get_site`. Reuse that Site; do not create another one. Obtain the applicable permission for the actual runtime/deployment changes before applying them.
+2. Through `update_environment_variables` (or the supported Sites runtime-settings UI), set `DOT_BOARD_INGRESS=sites-owner-private-v1`, `DOT_BOARD_AUDIENCE` to the exact new HTTPS origin, and `DOT_BOARD_IDENTITY_SETUP_ENABLED=true`. Leave `DOT_BOARD_OWNER_ID` absent for a genuinely uninitialized Site; never remove or replace an existing owner binding to use setup. Leave execution/Events features off.
+3. Save and deploy the exact Sites build with the normal private publishing workflow. A runtime-variable update requires deploying a saved version to take effect. This is an **installation stage**, not a usable-board completion: ordinary routes still return `owner_binding_unconfigured` until binding is finished.
+4. Have the actual owner open the new origin followed by `/setup` in their normal signed-in browser. The page displays only the current visitor's platform-provided Site ID. The installing dot may read `/api/setup/identity` using that same authenticated browser context; a service token cannot obtain a user identity. Do not put the ID in a URL, public issue or source file. If login is needed, use the platform sign-in UI; never ask for passwords or tokens in chat.
+5. Reconfirm ownership/private access and have the owner confirm that this is their own signed-in session. Ask the required concrete confirmation to bind that identity to this named Site. Use the supported runtime configuration operation to set `DOT_BOARD_OWNER_ID` to the returned `siteUserId` and set `DOT_BOARD_IDENTITY_SETUP_ENABLED=false` (or remove that setup flag), preserving unrelated values. Do not guess or accept a third party's proposed ID.
+6. Deploy the saved version again to apply the new runtime revision. Confirm that normal owner access works, a different user is denied, and `/setup` plus `/api/setup/identity` are disabled. Then finish the feature checks below before adding real data or calling installation complete.
+
+If any step is unavailable, report that exact step; do not silently use a local preview or disable authorization. The setup routes never write a database, owner binding, credential or runtime value. Concurrent visits cannot claim the Site. Once an owner is configured, these routes also refuse identity lookup even if someone forgot to turn off the flag.
+
+**Trust boundary:** the application sees an authenticated visitor ID, not a platform owner/private-policy attestation. It cannot determine a changed sharing policy from that header. The installing dot must verify current ownership and owner-only access in the management plane before setup and again before binding. The lookup itself grants no role or business access. Automated tests model the trusted Sites boundary; they do not prove live platform header stripping, private-policy enforcement or a successful new-account deployment.
+
+### Normal runtime settings after identity setup
+
 Set these through your Site's runtime configuration, not source files or browser code:
 
 | Setting | Required value or source |
 | --- | --- |
 | `DOT_BOARD_INGRESS` | `sites-owner-private-v1` |
-| `DOT_BOARD_OWNER_ID` | The new Site's trusted, Site-specific signed-in owner ID |
+| `DOT_BOARD_OWNER_ID` | The exact `siteUserId` obtained and confirmed through the first-install flow above |
+| `DOT_BOARD_IDENTITY_SETUP_ENABLED` | Temporary `true` only during first setup; `false` or absent afterward |
 | `DOT_BOARD_AUDIENCE` | The exact HTTPS origin returned for the new Site |
 | `DB` | The Site's D1 binding, with the complete schema |
 | `DOT_BOARD_SNAPSHOT` | The JSON **contents** of `examples/synthetic-snapshot.json`, not its file path; use your own authorized snapshot contents later |
@@ -95,7 +115,7 @@ The current private Sites entry disables direct Events delivery and its schedule
 
 After the platform confirms deployment, use the new hosted URL:
 
-1. Verify sign-in, signed-out denial and wrong-owner denial; the configured audience must match.
+1. Verify sign-in, signed-out denial and wrong-owner denial; the configured audience must match and both setup routes must be disabled.
 2. Verify synthetic projects, assets, filtering and task details on the actual hosted page.
 3. Change a synthetic task's manual status, reload, and confirm it persists without rewriting observed evidence or claiming execution.
 4. When intake/MCP is configured, verify one saved request, its retry, read receipt and progress receipt; no real executor should start from this test.

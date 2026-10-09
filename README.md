@@ -34,7 +34,7 @@ It displays records you authorize it to use. It does not automatically obtain ev
 
 **Copy this request to your dot:**
 
-> Read https://github.com/KimYx0207/dot-task-board and its docs/sites-deployment.md. Use your currently supported Sites build and deployment workflow to create my own private online task board, accessible only to me. Preserve the author's four public header entries: personal website aiking.dev, X @KimYx0207, GitHub KimYx0207, and the WeChat Official Account 老金带你玩AI. Use only my account and records I authorize; keep my identity, project data, conversation mappings and credentials private. Follow the complete deployment and access setup guide. Begin with sample data, verify the deployed page and owner-only access, and then give me my own Site URL with a short account of what works and what still needs setup. If a required platform feature or permission is unavailable, explain the exact missing step. Do not describe a local preview or unverified automatic execution as a completed online installation.
+> Read https://github.com/KimYx0207/dot-task-board and its docs/sites-deployment.md. Use your currently supported Sites build and deployment workflow to create my own private online task board, accessible only to me. Preserve the author's four public header entries: personal website aiking.dev, X @KimYx0207, GitHub KimYx0207, and the WeChat Official Account 老金带你玩AI. Use only my account and records I authorize; keep my identity, project data, conversation mappings and credentials private. Follow the complete deployment and access setup guide, including its read-only first-install identity page. Guide me through signing in and confirming my own Site configuration; do not ask me to guess an account ID. Begin with sample data, verify the deployed page and owner-only access, and then give me my own Site URL with a short account of what works and what still needs setup. If a required platform feature or permission is unavailable, explain the exact missing step. Do not describe a local preview or unverified automatic execution as a completed online installation.
 
 ### What you need
 
@@ -46,7 +46,7 @@ This is a prerelease. The build and packaging path has been checked, but a separ
 
 ### What has been checked
 
-The current source has **652 passing automated tests**, plus **18 compiled-application checks**. The deployment package and sample-data behavior have automated coverage. Browser visual and real-device acceptance remain incomplete.
+The current source has **668 passing automated tests**, plus **18 compiled-application checks**. The deployment package and sample-data behavior have automated coverage. Browser visual and real-device acceptance remain incomplete.
 
 **Native automatic execution, automatic continuation and real external callbacks are not yet verified.** A request being saved or a task status changing does not mean an agent has started work. See [integration status](docs/integrations.md) and the [deployment acceptance checklist](docs/sites-deployment.md#5-accept-the-new-online-installation).
 

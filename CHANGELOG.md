@@ -4,6 +4,13 @@
 
 ## 0.2.0-rc.1 — 2026-10-09 (source prerelease)
 
+### First-install Site identity lookup
+
+- Fix the first-install dependency loop: add a disabled-by-default, read-only `/setup` page and `/api/setup/identity` endpoint for authenticated Sites requests.
+- Keep every business route closed until the existing explicit owner binding is configured. Setup never claims a Site, writes a database or grants a role; it closes once an owner is set.
+- Add 16 first-install checks across source and compiled builds: origin, method, cache, output escaping, generic-entry isolation and no storage access. Full regression: 668 passing tests; the additional compiled-boundary suite remains 18 checks.
+- Document the concrete management check, owner browser login, confirmed runtime binding and redeployment sequence. No automatic owner enrollment, live deployment or identity configuration is performed by this source update.
+
 ### Reader-focused setup documentation
 
 - Keep the README focused on what the board does, a complete request to give your own dot, account requirements and the four public author links.
