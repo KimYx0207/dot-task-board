@@ -157,7 +157,7 @@ export function renderTaskHistory(container,history){
 function requirementResponse(value,taskId){return value?.taskId===taskId&&Number.isSafeInteger(value.version)&&value.version>=0&&typeof value.goal==='string'&&typeof value.acceptanceCriteria==='string'&&value.grantsExecution===false&&['goal','acceptanceCriteria'].every(key=>Array.isArray(value.sourceReferences?.[key])&&value.sourceReferences[key].every(ref=>typeof ref==='string'));}
 export function createTaskRequirementsController({requestJson,supported=()=>true,uuid=()=>globalThis.crypto.randomUUID(),clock=()=>new Date().toISOString(),onChange=()=>{},onSaved=()=>{}}){
  const entries=new Map();
- const get=id=>{if(!entries.has(id))entries.set(id,{loaded:false,loading:false,saving:false,data:null,goal:'',acceptanceCriteria:'',sources:'',submission:null,nativeSubmission:null,nativeReadConfirmed:false,nativeDraft:{requirementVersion:'',nativeTaskName:'',summary:'',observedAt:'',references:''},error:'',message:''});return entries.get(id);};
+ const get=id=>{if(!entries.has(id))entries.set(id,{loaded:false,loading:false,saving:false,data:null,goal:'',acceptanceCriteria:'',sources:'',submission:null,nativeSubmission:null,nativeReadConfirmed:false,nativeEditorOpen:false,nativeDraft:{requirementVersion:'',nativeTaskName:'',summary:'',observedAt:'',references:''},error:'',message:''});return entries.get(id);};
  const notify=()=>{try{onChange();}catch{}};
  const adopt=(entry,value)=>{entry.data=value;entry.loaded=true;entry.goal=value.goal;entry.acceptanceCriteria=value.acceptanceCriteria;entry.sources=[...new Set([...value.sourceReferences.goal,...value.sourceReferences.acceptanceCriteria])].join('\n');};
  const saved=(task,value)=>{try{onSaved(task.id,value);}catch{}};
@@ -192,7 +192,7 @@ export function createTaskRequirementsController({requestJson,supported=()=>true
   }catch(error){if(error.status===409){entry.nativeSubmission=null;entry.loaded=false;entry.error='版本或需求来源不匹配，请重新读取；不会覆盖历史';}else if(error.status>=400&&error.status<500&&![408,429].includes(error.status)){entry.nativeSubmission=null;entry.error='成果保存被拒绝，请核对输入与来源';}else entry.error='成果保存结果未确认，请先重新读取，不要重复追加';}
   finally{entry.saving=false;notify();}
  }
- return {get,open,edit,save,editNative,appendNative};
+ return {get,open,edit,save,editNative,appendNative,nativeOpen:(id,open)=>{get(id).nativeEditorOpen=Boolean(open);}};
 }
 function nativeEvidenceMatches(value,pending){const note=value?.nativeEvidence?.find(item=>item.eventId===pending.eventId);return value.version>pending.expectedVersion&&note?.sourceType==='native_task'&&['requirementVersion','nativeTaskName','summary','observedAt'].every(key=>note[key]===pending[key])&&JSON.stringify(note.resultReferences)===JSON.stringify(pending.resultReferences);}
 export function renderTaskRequirementsForm(container,task,controller){
@@ -211,7 +211,7 @@ export function renderTaskRequirementsForm(container,task,controller){
 }
 
 function renderNativeEvidenceEditor(container,task,controller){
- const {el,button}=dom(container),entry=controller.get(task.id),section=el('details','pc-history');section.open=Boolean(entry.nativeSubmission)||Object.values(entry.nativeDraft).some(Boolean);section.append(el('summary','','追加已核实的 native 成果来源'));
+ const {el,button}=dom(container),entry=controller.get(task.id),section=el('details','pc-history');section.open=entry.nativeEditorOpen||Boolean(entry.nativeSubmission)||Object.values(entry.nativeDraft).some(Boolean);section.addEventListener('toggle',()=>controller.nativeOpen(task.id,section.open));section.append(el('summary','','追加已核实的 native 成果来源'));
  section.append(el('p','pc-stamp','仅记录已发生的成果。引用每行：commit、deployment、test 或 native_result | 名称 | 来源。不会创建请求或改变执行状态。'));
  for(const [key,label,max] of [['requirementVersion','原文字需求版本',16],['nativeTaskName','原 native 任务名称',100],['summary','已核实成果摘要',600],['observedAt','实际观察时间（UTC，留空使用当前时间）',30],['references','成果引用（类型 | 名称 | 来源，每行一条）',2600]]){const field=el('label','requirements-field',label),input=el(key==='summary'||key==='references'?'textarea':'input');input.maxLength=max;input.value=entry.nativeDraft[key];input.setAttribute('aria-label',label);input.dataset.focusKey='native-evidence:'+key+':'+task.id;input.disabled=!entry.loaded||entry.loading||entry.saving||Boolean(entry.submission)||Boolean(entry.nativeSubmission);input.addEventListener('input',()=>controller.editNative(task.id,key,input.value));field.append(input);section.append(field);}
  const save=button(entry.saving?'正在保存…':entry.nativeSubmission?'重试同一成果保存':'保存成果注记',()=>void controller.appendNative(task),'native-evidence:save:'+task.id,'pc-save-status');save.disabled=!entry.loaded||entry.loading||entry.saving||Boolean(entry.submission)||Boolean(entry.nativeSubmission&&!entry.nativeReadConfirmed);section.append(save);container.append(section);
