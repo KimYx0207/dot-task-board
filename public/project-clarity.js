@@ -155,20 +155,20 @@ export function renderTaskHistory(container,history){
 }
 
 function requirementResponse(value,taskId){return value?.taskId===taskId&&Number.isSafeInteger(value.version)&&value.version>=0&&typeof value.goal==='string'&&typeof value.acceptanceCriteria==='string'&&value.grantsExecution===false&&['goal','acceptanceCriteria'].every(key=>Array.isArray(value.sourceReferences?.[key])&&value.sourceReferences[key].every(ref=>typeof ref==='string'));}
-export function createTaskRequirementsController({requestJson,supported=()=>true,uuid=()=>globalThis.crypto.randomUUID(),onChange=()=>{},onSaved=()=>{}}){
+export function createTaskRequirementsController({requestJson,supported=()=>true,uuid=()=>globalThis.crypto.randomUUID(),clock=()=>new Date().toISOString(),onChange=()=>{},onSaved=()=>{}}){
  const entries=new Map();
- const get=id=>{if(!entries.has(id))entries.set(id,{loaded:false,loading:false,saving:false,data:null,goal:'',acceptanceCriteria:'',sources:'',submission:null,error:'',message:''});return entries.get(id);};
+ const get=id=>{if(!entries.has(id))entries.set(id,{loaded:false,loading:false,saving:false,data:null,goal:'',acceptanceCriteria:'',sources:'',submission:null,nativeSubmission:null,nativeReadConfirmed:false,nativeDraft:{requirementVersion:'',nativeTaskName:'',summary:'',observedAt:'',references:''},error:'',message:''});return entries.get(id);};
  const notify=()=>{try{onChange();}catch{}};
  const adopt=(entry,value)=>{entry.data=value;entry.loaded=true;entry.goal=value.goal;entry.acceptanceCriteria=value.acceptanceCriteria;entry.sources=[...new Set([...value.sourceReferences.goal,...value.sourceReferences.acceptanceCriteria])].join('\n');};
  const saved=(task,value)=>{try{onSaved(task.id,value);}catch{}};
  async function open(task,force=false){if(!supported())return;const entry=get(task.id);if(entry.loading||entry.saving||entry.loaded&&!force)return;entry.loading=true;entry.error='';notify();
   try{const value=await requestJson('/api/tasks/'+encodeURIComponent(task.id)+'/requirements');if(!requirementResponse(value,task.id))throw Error('invalid_response');const pending=entry.submission;
    const confirmed=pending&&value.version>pending.expectedVersion&&Object.entries(pending.changes).every(([key,text])=>value[key]===text&&JSON.stringify(value.sourceReferences[key])===JSON.stringify(pending.sourceReferences));
-   adopt(entry,value);if(confirmed){entry.submission=null;entry.message='已回读确认保存';saved(task,value);}else if(pending)entry.message='已读取当前版本；原保存结果仍待核对，重试将保留原提交标识';
+   adopt(entry,value);if(entry.nativeSubmission){entry.nativeReadConfirmed=true;if(nativeEvidenceMatches(value,entry.nativeSubmission)){entry.nativeSubmission=null;entry.nativeDraft={requirementVersion:'',nativeTaskName:'',summary:'',observedAt:'',references:''};entry.message='已回读确认成果注记';saved(task,value);}else entry.message='已读取当前版本，原成果保存尚未确认；重试保留同一标识';}if(confirmed){entry.submission=null;entry.message='已回读确认保存';saved(task,value);}else if(pending)entry.message='已读取当前版本；原保存结果仍待核对，重试将保留原提交标识';
   }catch{entry.error='暂时无法读取目标与完成标准，请重新读取；不会更改任务状态';}finally{entry.loading=false;notify();}
  }
- function edit(id,key,value){const entry=get(id);if(!entry.loaded||entry.loading||entry.saving||entry.submission||!['goal','acceptanceCriteria','sources'].includes(key))return;entry[key]=value;entry.error='';entry.message='';}
- async function save(task){if(!supported())return;const entry=get(task.id);if(!entry.loaded||entry.loading||entry.saving)return;
+ function edit(id,key,value){const entry=get(id);if(!entry.loaded||entry.loading||entry.saving||entry.submission||entry.nativeSubmission||!['goal','acceptanceCriteria','sources'].includes(key))return;entry[key]=value;entry.error='';entry.message='';}
+ async function save(task){if(!supported())return;const entry=get(task.id);if(!entry.loaded||entry.loading||entry.saving||entry.nativeSubmission)return;
   if(!entry.submission){const changes={};for(const key of ['goal','acceptanceCriteria'])if(entry[key]!==entry.data[key])changes[key]=entry[key];if(!Object.keys(changes).length){entry.message='内容未变化，无需保存';notify();return;}
    const refs=entry.sources.split(/\r?\n/).map(x=>x.trim()).filter(Boolean);if(!refs.length||refs.length>5||new Set(refs).size!==refs.length||refs.some(x=>x.length>200)||Object.values(changes).some(x=>x.length>400)){entry.error='目标和标准各限400字；请填写1至5条不重复的来源引用，每行一条';notify();return;}
    try{entry.submission={eventId:uuid(),expectedVersion:entry.data.version,changes,sourceReferences:refs};}catch{entry.error='当前浏览器无法生成保存标识，请保留输入后重新读取';notify();return;}
@@ -178,20 +178,43 @@ export function createTaskRequirementsController({requestJson,supported=()=>true
   }catch(error){if(error.status===409){entry.submission=null;entry.loaded=false;entry.error='需求版本已变化或提交冲突，请重新读取后再编辑';}else if(error.status>=400&&error.status<500&&![408,429].includes(error.status)){entry.submission=null;entry.error='保存被拒绝，请核对来源与输入或重新读取；任务状态未修改';}else entry.error='暂时无法确认保存结果。请先重新读取核对；重试会使用同一提交标识';}
   finally{entry.saving=false;notify();}
  }
- return {get,open,edit,save};
+ function editNative(id,key,value){const entry=get(id);if(entry.loading||entry.saving||entry.submission||entry.nativeSubmission||!Object.hasOwn(entry.nativeDraft,key))return;entry.nativeDraft[key]=String(value);entry.error='';entry.message='';}
+ async function appendNative(task){if(!supported())return;const entry=get(task.id);if(!entry.loaded||entry.loading||entry.saving||entry.submission||!Array.isArray(entry.data?.nativeEvidence))return;
+  if(entry.goal!==entry.data.goal||entry.acceptanceCriteria!==entry.data.acceptanceCriteria||entry.sources!==[...new Set([...entry.data.sourceReferences.goal,...entry.data.sourceReferences.acceptanceCriteria])].join('\n')){entry.error='请先保存或重新读取未保存的需求文字，再追加成果';notify();return;}
+  if(entry.nativeSubmission&&!entry.nativeReadConfirmed){entry.error='成果保存结果未确认，请先重新读取需求';notify();return;}
+  if(!entry.nativeSubmission){
+   const draft=entry.nativeDraft,revision=Number(draft.requirementVersion),refs=draft.references.split(/\r?\n/).filter(line=>line.trim()).map(line=>{const [kind,label,...rest]=line.split('|').map(part=>part.trim());return {kind,label,reference:rest.join('|')};});
+   if(!Number.isSafeInteger(revision)||revision<1||revision>entry.data.version||!draft.nativeTaskName.trim()||draft.nativeTaskName.trim().length>100||!draft.summary.trim()||draft.summary.trim().length>600||!refs.length||refs.length>5||refs.some(ref=>!['commit','deployment','test','native_result'].includes(ref.kind)||!ref.label||ref.label.length>100||!ref.reference||ref.reference.length>300)||new Set(refs.map(ref=>ref.kind+'|'+ref.reference)).size!==refs.length){entry.error='请填写已保存的文字需求版本、原 native 任务名称、成果摘要和1至5条有效引用';notify();return;}
+   try{entry.nativeSubmission={eventId:uuid(),expectedVersion:entry.data.version,requirementVersion:revision,nativeTaskName:draft.nativeTaskName.trim(),summary:draft.summary.trim(),observedAt:draft.observedAt.trim()||clock(),resultReferences:refs};}catch{entry.error='无法生成成果保存标识';notify();return;}
+  }
+  entry.nativeReadConfirmed=false;entry.saving=true;entry.error='';entry.message='';notify();const pending=entry.nativeSubmission;
+  try{const value=await requestJson('/api/tasks/'+encodeURIComponent(task.id)+'/requirements/native-evidence',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(pending)});if(!requirementResponse(value,task.id)||!nativeEvidenceMatches(value,pending))throw Error('invalid_response');adopt(entry,value);entry.nativeSubmission=null;entry.nativeDraft={requirementVersion:'',nativeTaskName:'',summary:'',observedAt:'',references:''};entry.message='已保存成果注记；任务状态未修改';saved(task,value);
+  }catch(error){if(error.status===409){entry.nativeSubmission=null;entry.loaded=false;entry.error='版本或需求来源不匹配，请重新读取；不会覆盖历史';}else if(error.status>=400&&error.status<500&&![408,429].includes(error.status)){entry.nativeSubmission=null;entry.error='成果保存被拒绝，请核对输入与来源';}else entry.error='成果保存结果未确认，请先重新读取，不要重复追加';}
+  finally{entry.saving=false;notify();}
+ }
+ return {get,open,edit,save,editNative,appendNative};
 }
+function nativeEvidenceMatches(value,pending){const note=value?.nativeEvidence?.find(item=>item.eventId===pending.eventId);return value.version>pending.expectedVersion&&note?.sourceType==='native_task'&&['requirementVersion','nativeTaskName','summary','observedAt'].every(key=>note[key]===pending[key])&&JSON.stringify(note.resultReferences)===JSON.stringify(pending.resultReferences);}
 export function renderTaskRequirementsForm(container,task,controller){
  const {el,button}=dom(container),entry=controller.get(task.id),content=el('div','requirements-editor');
  content.append(el('p','pc-stamp',`需求记录版本 ${entry.data?.version??'待读取'} · 仅修改描述，不改变任务状态或执行安排`));
  const fields=[['goal','任务目标',400],['acceptanceCriteria','完成标准',400],['sources','来源引用（每行一个）',1004]],inputs=[];
  const save=button(entry.saving?'正在保存…':entry.submission?'重试并核对原保存':'保存目标与完成标准',()=>void controller.save(task),'requirements:save:'+task.id,'pc-save-status');
- const updateSave=()=>{save.disabled=!entry.loaded||entry.loading||entry.saving||(!entry.submission&&entry.goal===entry.data?.goal&&entry.acceptanceCriteria===entry.data?.acceptanceCriteria);};
- for(const [key,label,max] of fields){const field=el('label','requirements-field',label),area=el('textarea');area.rows=key==='sources'?3:2;area.maxLength=max;area.value=entry[key];area.setAttribute('aria-label',label);area.dataset.focusKey='requirements:'+key+':'+task.id;area.disabled=!entry.loaded||entry.loading||entry.saving||Boolean(entry.submission);area.addEventListener('input',()=>{controller.edit(task.id,key,area.value);updateSave();});field.append(area);content.append(field);inputs.push(area);}
+ const updateSave=()=>{save.disabled=!entry.loaded||entry.loading||entry.saving||Boolean(entry.nativeSubmission)||(!entry.submission&&entry.goal===entry.data?.goal&&entry.acceptanceCriteria===entry.data?.acceptanceCriteria);};
+ for(const [key,label,max] of fields){const field=el('label','requirements-field',label),area=el('textarea');area.rows=key==='sources'?3:2;area.maxLength=max;area.value=entry[key];area.setAttribute('aria-label',label);area.dataset.focusKey='requirements:'+key+':'+task.id;area.disabled=!entry.loaded||entry.loading||entry.saving||Boolean(entry.submission)||Boolean(entry.nativeSubmission);area.addEventListener('input',()=>{controller.edit(task.id,key,area.value);updateSave();});field.append(area);content.append(field);inputs.push(area);}
  const status=el('p',entry.error?'inbox-error':'pc-stamp',entry.error||entry.message||'来源引用用于核对需求，不构成执行授权');status.setAttribute('role','status');content.append(status);
  const actions=el('div','requirements-actions');actions.append(save,button(entry.loading?'读取中…':'重新读取需求',()=>void controller.open(task,true),'requirements:reload:'+task.id));actions.children[1].disabled=entry.loading||entry.saving;updateSave();content.append(actions);
  if(entry.data)for(const [key,label] of [['goal','目标来源'],['acceptanceCriteria','完成标准来源']])content.append(el('p','pc-stamp',label+'：'+(entry.data.sourceReferences[key].join('；')||'原任务记录，尚无独立来源引用')));
  renderNativeTaskEvidence(content,entry.data?.nativeEvidence);
+ if(Array.isArray(entry.data?.nativeEvidence))renderNativeEvidenceEditor(content,task,controller);
  container.replaceChildren(content);
+}
+
+function renderNativeEvidenceEditor(container,task,controller){
+ const {el,button}=dom(container),entry=controller.get(task.id),section=el('details','pc-history');section.open=Boolean(entry.nativeSubmission)||Object.values(entry.nativeDraft).some(Boolean);section.append(el('summary','','追加已核实的 native 成果来源'));
+ section.append(el('p','pc-stamp','仅记录已发生的成果。引用每行：commit、deployment、test 或 native_result | 名称 | 来源。不会创建请求或改变执行状态。'));
+ for(const [key,label,max] of [['requirementVersion','原文字需求版本',16],['nativeTaskName','原 native 任务名称',100],['summary','已核实成果摘要',600],['observedAt','实际观察时间（UTC，留空使用当前时间）',30],['references','成果引用（类型 | 名称 | 来源，每行一条）',2600]]){const field=el('label','requirements-field',label),input=el(key==='summary'||key==='references'?'textarea':'input');input.maxLength=max;input.value=entry.nativeDraft[key];input.setAttribute('aria-label',label);input.dataset.focusKey='native-evidence:'+key+':'+task.id;input.disabled=!entry.loaded||entry.loading||entry.saving||Boolean(entry.submission)||Boolean(entry.nativeSubmission);input.addEventListener('input',()=>controller.editNative(task.id,key,input.value));field.append(input);section.append(field);}
+ const save=button(entry.saving?'正在保存…':entry.nativeSubmission?'重试同一成果保存':'保存成果注记',()=>void controller.appendNative(task),'native-evidence:save:'+task.id,'pc-save-status');save.disabled=!entry.loaded||entry.loading||entry.saving||Boolean(entry.submission)||Boolean(entry.nativeSubmission&&!entry.nativeReadConfirmed);section.append(save);container.append(section);
 }
 
 export function renderNativeTaskEvidence(container,evidence){
