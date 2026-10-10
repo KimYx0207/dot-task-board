@@ -2,6 +2,14 @@
 
 [English](CHANGELOG.md) · [简体中文](CHANGELOG.zh-CN.md)
 
+## 0.2.0 — 2026-10-10
+
+- Bring project progress, task owners, blockers and evidence into one view, with explicit stale observations and archived cancellation history.
+- Edit existing goals, acceptance criteria and sources; retain versioned request receipts, manual status and configurable queue ordering.
+- Add native task result notes linked to a saved requirement revision, with source references, idempotent saves and stable editor state across refreshes.
+- Provide an existing-request session client for host-tool dispatch and result readback. Scheduled continuation uses the host's supported tools; queue execution requires a connected adapter, real user permission and verified original-task bindings.
+- Simplify bilingual release guidance and retain the account-specific setup steps in the deployment and integration guides.
+
 ## 0.2.0-rc.1 — 2026-10-09 (source prerelease)
 
 ### 2026-10-09 — existing requirements and accurate loading labels

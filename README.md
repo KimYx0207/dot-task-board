@@ -42,19 +42,17 @@ It displays records you authorize it to use. It does not automatically obtain ev
 - You may need to confirm account access or deployment actions. The repository cannot grant platform features or permissions for you.
 - Your copy starts with sample data. The original author's private projects, conversations and account are not included.
 
-This is a prerelease. The build and packaging path has been checked, but a separate user's complete first-time online deployment has not yet been tested. Setup may require steps specific to that user's account.
+Version 0.2.0 supports private online deployment with your own account and authorized records. Follow the setup guide to configure storage, identity and the features you want to enable.
 
-### Latest update: clear status and verified online continuation
+### Version 0.2.0: projects, requirements and continuation
 
-1. See projects, tasks, associated agents, blockers and evidence together. Canceled history stays in the archive; old or missing observations are marked explicitly.
-2. Save requests with separate read/progress receipts, and drag already-queued tasks into order when the optional queue is configured.
-3. Connect an explicitly authorized dot scheduled check to continue the original online task. The maintainer verified a natural scheduled wake, real work, result readback, and a later scheduled check that did not repeat the completed step.
+1. See projects, tasks, associated agents, blockers and evidence together. Canceled history stays in the archive; old or missing observations are marked clearly.
+2. Edit existing goals, acceptance criteria and their sources on the original task. Save new requests with read/progress receipts, update manual status, and reorder queued work by dragging when those services are configured.
+3. Connect an authorized dot scheduled check to continue the original online task. Link a saved requirement revision to the original native task and its result sources; the included session client supports existing-request dispatch and result readback through host tools.
 
-The third item is a **verified host workflow**, not a scheduler installed by this repository. Your own dot needs the supported scheduling, original-task access and execution tools. Follow the [continuation setup and acceptance steps](docs/integrations.md#scheduled-dot-continuation).
+Continuation requires the host's supported scheduling and execution tools. Queue-backed execution also requires a connected host adapter, real user permission and a verified original-task binding. Install the board first, then connect the capabilities you use through the [integration guide](docs/integrations.md); the repository does not install a scheduler or obtain execution access for you.
 
-**Local automatic dispatch, the cloud-thread request-dispatch chain, and real external callbacks remain unverified.** A saved request, a running-turn receipt or one completed substep does not prove that every task is finished. The release preserves the existing execution controls and does not import the maintainer's private account, task data or schedule.
-
-Automated checks and the exact revision are available in [CI](https://github.com/KimYx0207/dot-task-board/actions). A separate user's full first-time setup and real-device acceptance remain incomplete. See the [deployment checklist](docs/sites-deployment.md#5-accept-the-new-online-installation).
+The maintainer has exercised naturally scheduled online continuation, result readback and a later check that avoided repeating completed work. Find checks for each revision in [CI](https://github.com/KimYx0207/dot-task-board/actions) and use the [deployment checklist](docs/sites-deployment.md#5-accept-the-new-online-installation) for your own installation.
 
 ### Keep existing requirements visible
 
