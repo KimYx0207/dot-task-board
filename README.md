@@ -26,6 +26,28 @@ The board helps you see:
 
 It displays records you authorize it to use. It does not automatically obtain every conversation or turn a saved request into an executing agent. The interface currently uses Chinese labels.
 
+### See the interface
+
+These three real-use screenshots are published with the maintainer's approval. Project names, totals and progress reflect the time of capture.
+
+#### 1. See projects, tasks and progress
+
+Find tasks, owners, recent progress, blockers and next steps in one workspace. Use project navigation, status filters and search to focus the view.
+
+![Project workspace with navigation, task cards, owners and progress](docs/images/board-overview.png)
+
+#### 2. Add requirements to the right project
+
+Choose a project and related task, then enter a requirement or feedback. Save receipts and work progress are recorded separately; existing requirements do not need to be entered again.
+
+![Requirement form with project and task selection and a feedback field](docs/images/request-composer.png)
+
+#### 3. Change a task's recorded status
+
+With the manual-status service connected, choose a status directly on a task card. Manual records and execution arrangements remain separate.
+
+![Task status menu with not started, active, blocked, paused, completed and canceled options](docs/images/task-status.png)
+
 ### Try it in 3 steps
 
 1. Send `https://github.com/KimYx0207/dot-task-board` to your own dot.
