@@ -190,7 +190,24 @@ export function renderTaskRequirementsForm(container,task,controller){
  const status=el('p',entry.error?'inbox-error':'pc-stamp',entry.error||entry.message||'来源引用用于核对需求，不构成执行授权');status.setAttribute('role','status');content.append(status);
  const actions=el('div','requirements-actions');actions.append(save,button(entry.loading?'读取中…':'重新读取需求',()=>void controller.open(task,true),'requirements:reload:'+task.id));actions.children[1].disabled=entry.loading||entry.saving;updateSave();content.append(actions);
  if(entry.data)for(const [key,label] of [['goal','目标来源'],['acceptanceCriteria','完成标准来源']])content.append(el('p','pc-stamp',label+'：'+(entry.data.sourceReferences[key].join('；')||'原任务记录，尚无独立来源引用')));
+ renderNativeTaskEvidence(content,entry.data?.nativeEvidence);
  container.replaceChildren(content);
+}
+
+export function renderNativeTaskEvidence(container,evidence){
+ const {el}=dom(container),section=el('section','requirements-native-evidence');
+ section.append(el('h4','','native 任务成果来源'));
+ section.append(el('p','pc-stamp','以下为已记录的描述证据，关联原需求版本；不赋予执行权，不是 cloud_threads 队列回执，也不代表项目整体验收完成。'));
+ if(!Array.isArray(evidence))section.append(el('p','pc-copy','native 成果来源尚未读取，请等待或重新读取需求。'));
+ else if(!evidence.length)section.append(el('p','pc-copy','尚未记录 native 成果来源。'));
+ else for(const note of evidence){
+  const item=el('details','pc-history');item.append(el('summary','',`需求版本 ${note.requirementVersion} · ${note.nativeTaskName}`));
+  item.append(el('p','pc-copy',note.summary),el('p','pc-stamp','来源类型：native_task · 观察时间：'+note.observedAt+' · 记录时间：'+note.recordedAt));
+  item.append(el('p','pc-stamp','原需求来源：'+(note.requirementSourceReferences??[]).join('；')));
+  for(const ref of note.resultReferences??[])item.append(el('p','pc-copy',`${ref.kind} · ${ref.label}：${ref.reference}`));
+  section.append(item);
+ }
+ container.append(section);
 }
 
 function createQuickStatus(container,task,clarity,controller){

@@ -111,3 +111,11 @@ These APIs are plumbing for an explicitly authorized host. The repository does n
 ## Existing task requirements
 
 Owner-private Sites can persist `goal` and `acceptanceCriteria` for an existing task through `GET/POST /api/tasks/:taskId/requirements`, or `get_task_requirements` and `record_task_requirements`. Apply the complete schema chain first. Updates use an independent expected version and idempotent event ID; per-field source references are retained. The calling host must verify those references. Text never grants execution permission, creates a request, changes task identity or releases a queue reservation. The existing task detail exposes the editor only when `/api/config` reports `requirementsEnabled`. The default Node server, generic Worker and candidate do not inject this service and show the original task requirements without an editable form. A saved description is not automatic chat capture or dispatch.
+
+## Native task result notes
+
+`record_task_native_evidence` appends descriptive sources to an existing task's requirements journal. Supply its current `expectedVersion`, an existing immutable text-edit `requirementVersion` (at least 1; evidence-only revisions are not valid anchors), the original native task name, observation time, summary, and typed result references. The recording host must verify the cited results; these notes are not platform-certified execution receipts. Read them using `get_task_requirements` or the original task inspector. The normal authenticated HTTP equivalent is `POST /api/tasks/:taskId/requirements/native-evidence`.
+
+The server stamps the original requirement event and its recorded sources, retains all earlier notes, and uses the existing owner checks, CAS and idempotent event ID. Text edits retain evidence. The journal version advances without changing requirement text, task identity, binding, state, controls or queue. Notes neither create requests nor grant execution permission, and do not prove cloud-thread dispatch or whole-project acceptance. References render as text. The ledger rejects writes beyond 20 entries or 64 KiB instead of dropping history.
+
+No database migration is needed. Deploy the compatible reader before the first evidence write; subsequent rollback builds must retain that reader, because older readers reject the extended JSON envelope.

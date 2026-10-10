@@ -1,4 +1,4 @@
-import {TaskRequirementsError,normalizeTaskRequirements,taskRequirementsContext,taskRequirementsView,taskRequirementNotes} from '../domain/task-requirements.mjs';
+import {TaskRequirementsError,normalizeTaskRequirements,normalizeNativeTaskEvidence,taskRequirementsContext,taskRequirementsView,taskRequirementNotes} from '../domain/task-requirements.mjs';
 
 export function createTaskRequirementsService({store,ownerId,readSnapshot,clock=()=>new Date().toISOString()}={}){
  const requireOwner=owner=>{if(typeof owner!=='string'||!owner||owner!==owner.trim()||owner.length>200)throw new TaskRequirementsError('authentication_required',401);if(typeof ownerId!=='string'||!ownerId)throw new TaskRequirementsError('owner_binding_unconfigured',503);if(owner!==ownerId)throw new TaskRequirementsError('board_access_denied',403);};
@@ -7,6 +7,7 @@ export function createTaskRequirementsService({store,ownerId,readSnapshot,clock=
  return {available,
   async get(owner,taskId){requireOwner(owner);await requireStore();const task=taskRequirementsContext(await readSnapshot(),taskId);return taskRequirementsView(task,await store.get(owner,taskId));},
   async set(owner,input){requireOwner(owner);await requireStore();const value=normalizeTaskRequirements(input),task=taskRequirementsContext(await readSnapshot(),value.taskId);const result=await store.set(owner,value,clock());return {...taskRequirementsView(task,result.row),duplicate:result.duplicate};},
+  async appendNativeEvidence(owner,input){requireOwner(owner);await requireStore();const value=normalizeNativeTaskEvidence(input),task=taskRequirementsContext(await readSnapshot(),value.taskId);const result=await store.appendNativeEvidence(owner,value,clock());return {...taskRequirementsView(task,result.row),duplicate:result.duplicate};},
   async overlay(owner,snapshot){
    requireOwner(owner);if(!snapshot||!Array.isArray(snapshot.tasks)||!await available())return snapshot;
    const current=await readSnapshot();if(!current||!Array.isArray(current.tasks))return snapshot;const allowed=new Set(current.tasks.map(task=>task.id));

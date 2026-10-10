@@ -111,3 +111,11 @@ Worker 提供 `scheduled` 发件箱处理入口，但平台定时触发需要单
 ## 既有任务需求字段
 
 所有者私有 Sites 可通过 `GET/POST /api/tasks/:taskId/requirements`，或 `get_task_requirements`、`record_task_requirements` 保存原任务的 `goal` 与 `acceptanceCriteria`。先应用完整迁移链。更新使用独立版本 CAS 和幂等事件 ID，逐字段保留来源引用；调用宿主必须核实引用。文本不会授予执行许可、创建请求、改变任务身份或释放队列占位。原任务详情仅在 `/api/config` 返回 `requirementsEnabled` 时显示编辑器。默认 Node 服务、通用 Worker 与 candidate 未注入该服务，只展示原需求，不显示可编辑表单。保存说明不代表已自动获取聊天需求或完成派发。
+
+## native 任务成果注记
+
+`record_task_native_evidence` 为原任务的需求记录追加描述证据：传入当前 `expectedVersion`、已持久保存的文字编辑 `requirementVersion`（至少为 1；纯成果注记版本不能作为需求源）、原 native 任务名称、观察时间、摘要及分类成果引用。记录宿主须先核实真实来源，注记不属于平台认证的执行回执。可通过 `get_task_requirements` 或原任务详情回读；正常已认证 HTTP 入口为 `POST /api/tasks/:taskId/requirements/native-evidence`。
+
+服务端关联原需求事件及其来源，保留全部历史，复用原所有者检查、CAS 和幂等事件。后续文字编辑保留成果注记；记录版本递增不会修改需求正文、原身份、绑定、状态、控制或队列。注记不创建请求、不赋予执行权，也不代表 cloud_threads 派发或整项验收完成。引用按文字显示；超过 20 条或 64 KiB 会明确拒绝，不截掉旧记录。
+
+不需数据库迁移。须先部署兼容读取器再首次保存；之后回滚的版本也必须保留该读取器，旧版无法读取扩展的 JSON 记录。
