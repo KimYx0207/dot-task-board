@@ -129,3 +129,25 @@ test('slow host review never refreshes the source read timestamp',async()=>{
  await f.dispatch();f.terminal();f.impl.update=async a=>{recordedTime=a.executionEvidence.observedAt;throw Object.assign(Error('old source evidence'),{code:'stale_attempt_evidence'});};
  const r=await client.reconcile({jobId:f.job.id});assert.equal(recordedTime,'2026-01-01T00:00:00Z');assert.equal(r.reason,'terminal_write_unconfirmed');assert.equal(f.job.holdsSlot,true);
 });
+
+test('read-only continuation inspection reports the actual original request without claim or send',async()=>{
+ const f=fixture();const result=await f.client.inspectContinuation({requestId:f.job.requestId});
+ assert.equal(result.outcome,'continuation_evidence_reviewed');assert.equal(result.readOnly,true);assert.equal(result.executionAuthorized,false);assert.equal(result.admissionChecked,false);assert.equal(result.executionStarted,false);assert.equal(result.reservationCreated,false);
+ assert.equal(result.requestVersion,f.request.version);assert.equal(result.threadId,f.job.threadId);assert.equal(result.priorTurnId,f.raw.latestTurn.id);
+ assert.equal(f.count('claim'),0);assert.equal(f.count('update'),0);assert.equal(f.count('sendMessage'),0);assert.equal(f.job.state,'queued');
+});
+test('read-only inspection stops on active, withdrawn, unbound and ambiguous requests without writes',async()=>{
+ for(const change of [f=>{f.raw.latestTurn.status='inProgress';},f=>{f.binding.threadId='other-thread';},f=>{f.impl.getWithdrawal=async()=>({requestId:f.job.requestId,futureAdmissionStopped:true});},f=>{f.impl.listJobs=async()=>({jobs:[clone(f.job),{...clone(f.job),id:'second',requestId:'second-request'}]});}]){
+  const f=fixture();change(f);const result=await f.client.inspectContinuation({requestId:f.job.requestId});assert.equal(result.outcome,'stopped');assert.equal(result.readOnly,true);assert.equal(f.count('claim'),0);assert.equal(f.count('update'),0);assert.equal(f.count('sendMessage'),0);
+ }
+});
+test('inspection is not cached authorization for a later dispatch',async()=>{
+ const f=fixture();assert.equal((await f.client.inspectContinuation({requestId:f.job.requestId})).outcome,'continuation_evidence_reviewed');
+ f.impl.getWithdrawal=async()=>({requestId:f.job.requestId,futureAdmissionStopped:true});assert.equal((await f.dispatch()).reason,'request_withdrawn');assert.equal(f.count('claim'),0);assert.equal(f.count('sendMessage'),0);
+});
+
+test('read-only inspection rejects absent, invalid and mismatched versions',async()=>{
+ for(const change of [f=>{delete f.job.version;},f=>{f.job.version=0;},f=>{f.job.requestVersion=1.5;},f=>{delete f.job.requestVersion;delete f.request.version;},f=>{delete f.request.version;},f=>{f.request.version++;}]){
+  const f=fixture();change(f);const result=await f.client.inspectContinuation({requestId:f.job.requestId});assert.equal(result.outcome,'stopped');assert.equal(f.count('claim'),0);assert.equal(f.count('sendMessage'),0);
+ }
+});

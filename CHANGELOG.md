@@ -2,6 +2,15 @@
 
 [English](CHANGELOG.md) · [简体中文](CHANGELOG.zh-CN.md)
 
+## 0.3.0-rc.1 — 2026-10-11 (source preview)
+
+- Simplify the project homepage: progress and decisions first, one primary request entry, with filters, raw records, candidate source details and technical diagnostics collapsed on demand. Preserve task controls and project-level Agent grouping. Show exact duplicate progress text once, remove the repeated goal/criteria block from task details, and keep full candidate reasons in the detail panel.
+- Add durable candidate suggestions with source references, rationale, expected outcome, deadline, project and decision notes.
+- Approve a candidate into exactly one ordinary received request, with atomic persistence, version checks and idempotent replay. Approval does not enqueue or execute work.
+- Separate approval, project, task and result navigation while retaining project hierarchy and the four author links.
+- Add a read-only original-session continuation inspection and explicit missing-host capability diagnostics. Dispatch rechecks current evidence instead of treating inspection as authorization.
+- Keep Sites event delivery and execution-host setup explicit; no change to credentials, execution gates, binding, TTL or uncertain-result recovery.
+
 ## 0.2.0 — 2026-10-10
 
 - Bring project progress, task owners, blockers and evidence into one view, with explicit stale observations and archived cancellation history.

@@ -28,25 +28,25 @@ It displays records you authorize it to use. It does not automatically obtain ev
 
 ### See the interface
 
-These three real-use screenshots are published with the maintainer's approval. Project names, totals and progress reflect the time of capture.
+The screenshots below are captured from this version's running interface using explicitly **synthetic demo records**, not private production data.
 
-#### 1. See projects, tasks and progress
+#### 1. Projects keep tasks and agent roles together
 
-Find tasks, owners, recent progress, blockers and next steps in one workspace. Use project navigation, status filters and search to focus the view.
+Open directly to projects and their latest progress, with current blockers visible. Requests that need your decision appear separately, and one main button adds a new request. Goals, source records, filters and diagnostics remain available in expandable details; each project keeps its task owners together.
 
-![Project workspace with navigation, task cards, owners and progress](docs/images/board-overview.png)
+![Project workspace with synthetic tasks, requirements and agent roles](docs/images/workspace-overview.png)
 
-#### 2. Add requirements to the right project
+#### 2. Review a suggestion before saving a request
 
-Choose a project and related task, then enter a requirement or feedback. Save receipts and work progress are recorded separately; existing requirements do not need to be entered again.
+Review the title, reason and expected outcome, then approve or decline. Expand the supporting details for sources, deadline and the original context. Approval saves one received request with a durable receipt. Starting execution is a separate step.
 
-![Requirement form with project and task selection and a feedback field](docs/images/request-composer.png)
+![Candidate approval with synthetic source, expected outcome and decision controls](docs/images/candidate-approval.png)
 
-#### 3. Change a task's recorded status
+#### 3. Find result references and see connection requirements
 
-With the manual-status service connected, choose a status directly on a task card. Manual records and execution arrangements remain separate.
+Results keep recorded source URLs together. Expand connection details when you need to check host setup or continuation diagnostics; they do not crowd the project homepage.
 
-![Task status menu with not started, active, blocked, paused, completed and canceled options](docs/images/task-status.png)
+![Synthetic result reference and connection status showing direct Sites Events execution is not connected](docs/images/results-capabilities.png)
 
 ### Try it in 3 steps
 
@@ -65,6 +65,14 @@ With the manual-status service connected, choose a status directly on a task car
 - Your copy starts with sample data. The original author's private projects, conversations and account are not included.
 
 Version 0.2.0 supports private online deployment with your own account and authorized records. Follow the setup guide to configure storage, identity and the features you want to enable.
+
+### 0.3.0 preview: review suggestions before they become requests
+
+- **Approvals:** keep a suggestion's source, reason, expected result, deadline and project together. Approve it to save one request, or decline it with a note.
+- **Projects first:** latest progress and decisions are visible first; identical progress/blocker/next-step text is shown once with its labels retained. Filters, raw records and technical details expand on demand. Task owners and result records stay grouped by project.
+- **Continue the original task:** the session client can inspect the selected request and original session before reserving capacity. Missing connections and blocked states stay visible.
+
+Approval saves a request for dot to read. Execution uses the installation's connected host and its actual permissions. [Workflow and setup details](docs/candidate-workflow.md) explain these separate steps.
 
 ### Version 0.2.0: projects, requirements and continuation
 

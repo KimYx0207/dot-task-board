@@ -11,6 +11,13 @@ const names=Object.freeze({
  sendMessage:'mcp__codex_apps__cloud_threads_send_message'
 });
 export const dotSessionToolNames=names;
+// Capability discovery is descriptive only. Do not substitute unavailable tools
+// with successful-looking results or interpret presence as permission to run.
+export function inspectDotSessionCapabilities({nativeTools,reviewContinuation,reviewCompletion,newEventId}={}){
+ const missingTools=Object.entries(names).filter(([,key])=>typeof nativeTools?.[key]!=='function').map(([role,tool])=>({role,tool}));
+ const missingHostFunctions=Object.entries({reviewContinuation,reviewCompletion,newEventId}).filter(([,value])=>typeof value!=='function').map(([name])=>name);
+ return {schemaVersion:'dot-board.session-capabilities/1',toolsPresent:missingTools.length===0,hostFunctionsPresent:missingHostFunctions.length===0,dependenciesPresent:missingTools.length===0&&missingHostFunctions.length===0,missingTools,missingHostFunctions,executionAuthorized:false,executionStarted:false};
+}
 export function bindDotSessionTools(nativeTools){
  const bound={};
  for(const [name,key] of Object.entries(names)){
