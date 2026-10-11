@@ -5,7 +5,8 @@ import {taskControlMcpTools,callTaskControlTool} from './task-controls-mcp.mjs';
 import {boardObservationMcpTools,callBoardObservationTool} from './observations-mcp.mjs';
 import {IntakeError,intakeId} from '../domain/intake.mjs';
 import {readIntakeJson} from './intake-http.mjs';
-import {MCP_EVENTS_PROTOCOL,McpEventsError} from '../domain/mcp-events.mjs';
+import {MCP_EVENTS_PROTOCOL} from '../domain/mcp-events.mjs';
+import {mcpEventRequestParams,mcpEventFailure} from './mcp-event-request.mjs';
 import {dispatchMcpTools,callDispatchTool} from './dispatch-mcp.mjs';
 const intakeMcpString={type:'string',minLength:1,maxLength:100};
 const intakeMcpSchemas={
@@ -59,8 +60,8 @@ export async function handleIntakeMcp(request,{service,mcpEnabled=false,headers=
   if(!mcpEnabled)return protocolError(id,-32000,'Intake bridge is not enabled',403);
   if(message.method.startsWith('events/')){
     if(!eventsEnabled||!events)return protocolError(id,-32601,'Events are not enabled');
-    try{const result=message.method==='events/list'?await events.list(ownerId):message.method==='events/subscribe'?await events.subscribe(ownerId,message.params??{}):await events.unsubscribe(ownerId,message.params??{});return reply({jsonrpc:'2.0',id,result});}
-    catch(error){return reply({jsonrpc:'2.0',id,error:{code:error instanceof McpEventsError?error.rpcCode:-32603,message:error instanceof McpEventsError?error.code:'event_unavailable',...(error instanceof McpEventsError&&error.data?{data:error.data}:{})}},error instanceof McpEventsError?error.status:503);}
+    try{const params=mcpEventRequestParams(message.params??{},protocol);const result=message.method==='events/list'?await events.list(ownerId):message.method==='events/subscribe'?await events.subscribe(ownerId,params):await events.unsubscribe(ownerId,params);return reply({jsonrpc:'2.0',id,result});}
+    catch(error){const failure=mcpEventFailure(error,message.params);return reply({jsonrpc:'2.0',id,error:failure.error},failure.status);}
   }
   if(candidates&&candidateMcpTools.some(tool=>tool.name===message.params?.name)){
     try{const result=await callCandidateTool(candidates,ownerId,message.params.name,message.params.arguments);return reply({jsonrpc:'2.0',id,result:{content:[{type:'text',text:JSON.stringify(result)}],structuredContent:result,isError:false}});}

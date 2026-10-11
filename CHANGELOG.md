@@ -4,6 +4,7 @@
 
 ## 0.3.0-rc.1 — 2026-10-11 (source preview)
 
+- Accept and strip standard MCP request `_meta` at the Events boundary, retaining strict business fields, owner checks and disabled transport gates. Rejection diagnostics use only allowlisted categories and a validated callback origin; no callback path, secret or raw exception is logged. This is a compatibility fix, not live native-delivery acceptance.
 - Add owner-authenticated Sites Events discovery independently of the delivery switch, with explicit transport/subscription/outbox readiness.
 - Add atomic request and candidate-approval events, immediate delivery limited to two items and 25 seconds, and durable pending/failure records. Reserve the first slot for older due work and the next for the new event, avoiding multi-subscription starvation. No background retry trigger is installed.
 - Constrain direct callbacks to verified exact origins and an independently established complete public-egress contract. Keep delivery disabled by default and preserve owner-scoped unsubscribe after a project is stopped or removed.
