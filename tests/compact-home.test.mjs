@@ -1,7 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
-import {renderProjectClarity, renderRequestInbox} from '../public/project-clarity.js';
+import vm from 'node:vm';
+import {renderProjectClarity, renderRequestInbox, taskClarity, compactTaskFacts, renderTaskHistory} from '../public/project-clarity.js';
 import {workspaceDecisions, renderWorkspaceDecisions, decisionProjectId} from '../public/workspace-views.js';
 import {createCandidateController, renderCandidateWorkspace} from '../public/candidate-workspace.js';
 
@@ -144,4 +145,42 @@ test('first-read failures stay visible as uncertainty with a retry instead of an
 test('app decision shortcuts explicitly choose proposed candidates and the unique project resolver',async()=>{
   const app=await readFile(new URL('../public/app.js',import.meta.url),'utf8');
   assert.match(app,/projectId:decisionProjectId\(requestChoices\(\),ui.project\)/);assert.match(app,/onCandidates:\(\)=>\{candidateController.setFilter\('proposed'\);selectWorkspace\('approvals'\)/);
+});
+
+test('identical progress, blocker and next action render once with every field still identified',()=>{
+  const value=board(),task=value.tasks[0],copy='One exact source sentence';Object.assign(task,{observation:copy,blocker:copy,nextAction:copy});const before=structuredClone(value),root=setup();
+  renderProjectClarity(root,value,null,{now});assert.equal(visibleText(root).split(copy).length-1,1);assert.match(visibleText(root),/最新进展 · 卡点 · 下一步/);assert.equal(nodes(root,'pc-blocker').length,0);assert.equal(nodes(root,'pc-next').length,0);assert.deepEqual(value,before);
+  task.observation='Different observation';renderProjectClarity(root,value,null,{now});assert.equal(visibleText(root).split(copy).length-1,1);assert.match(visibleText(root),/卡点 · 下一步/);assert(visibleText(root).includes(task.observation));
+  task.nextAction='A genuinely different next action';renderProjectClarity(root,value,null,{now});assert(visibleText(root).includes(task.nextAction));assert.equal(nodes(root,'pc-next').length,1);
+});
+
+test('exact text deduplication does not merge different text, stopped arrangements or manual completion notes',()=>{
+  const different=compactTaskFacts({progress:'Check export',blocker:'check export',next:'Check export ',stopped:false});assert.equal(different.blocker,'check export');assert.equal(different.next,'Check export ');
+  for(const flags of [{stopped:true},{manualCompleted:true}]){const result=compactTaskFacts({progress:'Keep original instruction',next:'Keep original instruction',...flags});assert.equal(result.progress,'Keep original instruction');assert.equal(result.next,'Keep original instruction');assert.equal(result.progressIsNext,false);}
+});
+
+test('candidate list is compact while the selected detail preserves full reason, outcome and state',async()=>{
+  const controller=createCandidateController({requestJson:async()=>({candidate})});await controller.select(candidate.id);const root=setup();renderCandidateWorkspace(root,controller,{enabled:true,capabilities:{canReview:true},projects:[{id:'p',name:'Synthetic project'}]});
+  const row=nodes(root,'cw-candidate')[0],detail=nodes(root,'cw-detail')[0];assert(row.textContent.includes(candidate.title));assert(row.textContent.includes('Synthetic project'));assert.equal(nodes(row,'cw-card-date').length,1);assert(!row.textContent.includes(candidate.reason));assert.equal(nodes(row,'cw-status').length,0);assert(detail.textContent.includes(candidate.reason));assert(detail.textContent.includes(candidate.expectedOutcome));assert.equal(nodes(detail,'cw-status').length,1);
+});
+
+async function inspector(task){
+  const app=await readFile(new URL('../public/app.js',import.meta.url),'utf8'),source=app.slice(app.indexOf('function taskInspector('),app.indexOf('\nfunction renderInspector('));
+  const doc={createElement:tag=>new Node(tag,doc),createDocumentFragment:()=>new Node('fragment',doc),createTextNode:value=>{const n=new Node('#text',doc);n.textContent=value;return n;}};
+  const el=(tag,cls='',text)=>{const n=doc.createElement(tag);n.className=cls;if(text!==undefined)n.textContent=text;return n;};
+  const context={task,document:doc,el,button:(cls,label,run)=>{const n=el('button',cls,label);n.addEventListener('click',run);return n;},ui:{},inspectorTop:()=>el('header'),openTaskRequest(){},taskState:()=>({label:task.state}),badge:state=>el('span','badge',state.label),freshLabel:()=>'',formatted:value=>value||'时间未记录',text:value=>value||'',currentBoard:()=>({tasks:[task],agents:[]}),queueSnapshot:null,config:{requirementsEnabled:true},taskClarity,compactTaskFacts,renderTaskHistory,taskAgents:()=>[],appendEvidence:target=>target.append(el('span','','Recorded evidence')),requirements:{},manualStatuses:{},expandedDetails:new Set(),renderTaskRequirementsForm:(target,value)=>{const area=el('textarea');area.value=value.goal;target.append(area);},renderManualStatusForm:target=>target.append(el('button','','保存状态'))};
+  context.detailSection=(title,icon,value,missing='暂无记录')=>{const n=el('section','detail-section');n.append(el('h3','',title));if(value!==undefined)n.append(el('p','',value||missing));return n;};
+  context.appendPairs=(target,pairs)=>{const dl=el('dl');for(const [key,value] of pairs)dl.append(el('dt','',key),el('dd','',value||'未记录'));target.append(dl);};
+  return vm.runInNewContext(source+'; taskInspector(task);',context);
+}
+
+test('task inspector shows requirements once while retaining editing, owner decision and pause limits',async()=>{
+  const task={...board().tasks[0],state:'paused',retainedDecision:'Decide the remaining scope',goal:'The unique goal',acceptanceCriteria:'The unique standard'},before=structuredClone(task),root=await inspector(task);
+  assert.equal(root.textContent.split(task.goal).length-1,1);assert.equal(root.textContent.split(task.acceptanceCriteria).length-1,1);assert(root.textContent.includes(task.retainedDecision));assert.match(root.textContent,/补充决定与限制/);assert.match(root.textContent,/保持暂停；此页面不会启动或恢复任务/);assert.match(root.textContent,/编辑目标与完成标准/);assert(walk(root).some(node=>node.tagName==='TEXTAREA'&&node.value===task.goal));assert.match(root.textContent,/保存状态/);assert.deepEqual(task,before);
+});
+
+test('task inspector combines exact repeated facts without dropping next owner or unique facts',async()=>{
+  const copy='Await the exact approval',task={...board().tasks[0],observation:copy,blocker:copy,nextAction:copy,nextOwnerRole:'Original reviewer'},root=await inspector(task);
+  assert.equal(root.textContent.split(copy).length-1,1);assert.match(root.textContent,/进展记录 · 卡点 · 下一步/);assert(root.textContent.includes(task.nextOwnerRole));
+  task.nextAction='Now inspect the export';const changed=await inspector(task);assert(changed.textContent.includes(task.nextAction));assert(changed.textContent.includes(copy));
 });

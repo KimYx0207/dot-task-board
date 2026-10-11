@@ -69,7 +69,7 @@ Version 0.2.0 supports private online deployment with your own account and autho
 ### 0.3.0 preview: review suggestions before they become requests
 
 - **Approvals:** keep a suggestion's source, reason, expected result, deadline and project together. Approve it to save one request, or decline it with a note.
-- **Projects first:** latest progress and decisions are visible first; filters, raw records and technical details expand on demand. Task owners and result records stay grouped by project.
+- **Projects first:** latest progress and decisions are visible first; identical progress/blocker/next-step text is shown once with its labels retained. Filters, raw records and technical details expand on demand. Task owners and result records stay grouped by project.
 - **Continue the original task:** the session client can inspect the selected request and original session before reserving capacity. Missing connections and blocked states stay visible.
 
 Approval saves a request for dot to read. Execution uses the installation's connected host and its actual permissions. [Workflow and setup details](docs/candidate-workflow.md) explain these separate steps.

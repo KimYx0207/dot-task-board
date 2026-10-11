@@ -4,7 +4,7 @@
 
 ## 0.3.0-rc.1 — 2026-10-11 (source preview)
 
-- Simplify the project homepage: progress and decisions first, one primary request entry, with filters, raw records, candidate source details and technical diagnostics collapsed on demand. Preserve task controls and project-level Agent grouping.
+- Simplify the project homepage: progress and decisions first, one primary request entry, with filters, raw records, candidate source details and technical diagnostics collapsed on demand. Preserve task controls and project-level Agent grouping. Show exact duplicate progress text once, remove the repeated goal/criteria block from task details, and keep full candidate reasons in the detail panel.
 - Add durable candidate suggestions with source references, rationale, expected outcome, deadline, project and decision notes.
 - Approve a candidate into exactly one ordinary received request, with atomic persistence, version checks and idempotent replay. Approval does not enqueue or execute work.
 - Separate approval, project, task and result navigation while retaining project hierarchy and the four author links.

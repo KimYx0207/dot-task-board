@@ -66,6 +66,15 @@ export function taskClarity(task, board, queue, now = Date.now(), staleAfterMinu
   return {task, manual, ...display, history:display.manualCompleted?{blocker:safe(task.blocker),next:safe(task.nextAction)}:null, owners, execution, executionState, threadVerified:Boolean(execution?.threadBound), stopped, freshness, status, progress, next, blocker:display.manualCompleted?'':safe(task.blocker)};
 }
 
+// Collapse only identical source text, retaining every field's visible meaning.
+// Stop arrangements and manual completion notes remain separate from observations.
+export function compactTaskFacts(clarity) {
+  const progress=safe(clarity.progress),blocker=clarity.stopped?'':safe(clarity.blocker),next=safe(clarity.next);
+  const progressIsBlocker=Boolean(progress&&blocker===progress),mayMergeNext=!clarity.stopped&&!clarity.manualCompleted;
+  const progressIsNext=Boolean(mayMergeNext&&progress&&next===progress),blockerIsNext=Boolean(mayMergeNext&&!progressIsNext&&blocker&&next===blocker);
+  return {progress,blocker:progressIsBlocker?'':blocker,next:progressIsNext||blockerIsNext?'':next,progressIsBlocker,progressIsNext,blockerIsNext};
+}
+
 function dom(container) {
   const doc = container.ownerDocument;
   const el = (tag, cls = '', value) => { const node = doc.createElement(tag); node.className = cls; if (value !== undefined) node.textContent = safe(String(value)); return node; };
@@ -95,7 +104,7 @@ export function renderProjectClarity(container, board, queue, {project = '', que
       section.append(roster);
     } else for (const mapped of group.tasks) {
       const task = list(board.tasks).find(item => item.id === mapped.id); if (!task) continue;
-      const c = taskClarity(task, board, queue, now, staleAfterMinutes), article = el('article', 'pc-task'); article.dataset.taskId = task.id;
+      const c = taskClarity(task, board, queue, now, staleAfterMinutes), facts=compactTaskFacts({...c,progress:associationOnly(c.progress)?'':c.progress,blocker:associationOnly(c.blocker)?'':c.blocker,next:associationOnly(c.next)?'':c.next}), article = el('article', 'pc-task'); article.dataset.taskId = task.id;
       const heading = el('div', 'pc-task-head');
       const title = button((task.taskNumber ? `#${task.taskNumber} · ` : '') + safe(task.title, '未命名任务'), () => onTask?.(task.id), 'pc:task:' + task.id, 'pc-task-title'); title.setAttribute('aria-label', '查看任务详情：' + safe(task.title, '未命名任务'));
       const status = statusController ? createQuickStatus(container,task,c,statusController) : el('span', 'pc-status', c.status); status.dataset.state = c.manual ? c.manual.state : c.stopped ? task.state : c.executionState === 'running' ? 'running' : task.state === 'running' ? 'unknown' : task.state;
@@ -119,10 +128,10 @@ export function renderProjectClarity(container, board, queue, {project = '', que
         for(const person of c.owners)ownerNotes.append(el('p','pc-owner-state',safe(person.name,'已记录负责人')+' · '+ownerObservationLabel(person,now,staleAfterMinutes)));
         details.append(ownerNotes);
       }
-      if(!associationOnly(c.progress)){
+      if(facts.progress){
         const historicalObservation=c.freshness==='old';
         const progress = el('section', 'pc-progress');
-        progress.append(el('h3', '', historicalObservation?'历史导入记录':'最新进展'));
+        progress.append(el('h3', '', [historicalObservation?'历史导入记录':'最新进展',facts.progressIsBlocker?(c.freshness==='current'?'卡点':'记录卡点'):'',facts.progressIsNext?'下一步':''].filter(Boolean).join(' · ')));
         if(historicalObservation)details.append(el('p','pc-stamp','历史导入记录不代表当前部署统计，也不是自动接续验收结果。'));
         progress.append(el('p', 'pc-copy', c.progress));
         if(task.observedAt)progress.append(el('span', 'pc-stamp', utcTime(task.observedAt) + (c.freshness === 'old' ? (c.manualCompleted?' · 历史观察已过期，手动完成决定保持':' · 观察已过期，当前进展待核实') : c.freshness === 'future' ? ' · 时间待核实' : '')));
@@ -134,8 +143,8 @@ export function renderProjectClarity(container, board, queue, {project = '', que
         const receipt = disclosure('pc:receipt:' + task.id, label, 'pc-receipt');
         receipt.append(el('p', 'pc-receipt-title', safe(c.execution.displayTitle) || safe(c.execution.title, '本次执行')), el('p', 'pc-copy', safe(c.execution.summary) || safe(c.execution.lastEffectiveAction) || '尚无结果摘要'), el('span', 'pc-stamp', '回执时间：' + utcTime(c.execution.lastExecutionObservedAt || c.execution.lastLifecycleObservedAt || c.execution.observedAt)), el('p', 'pc-receipt-note', '这条回执只对应本次执行，不代表整个项目已完成。')); details.append(receipt);
       }
-      if (!c.stopped && c.blocker && !associationOnly(c.blocker)) { const block = disclosure('pc:blocker:' + task.id, (c.freshness === 'current' ? '卡点 · ' : '记录卡点 · ') + Array.from(c.blocker).slice(0, 54).join('') + (Array.from(c.blocker).length > 54 ? '…' : ''), 'pc-blocker'); block.append(el('p', 'pc-copy', c.blocker)); article.append(block); }
-      if(!associationOnly(c.next)){const next = el('div', 'pc-next'); next.append(el('h3', '', c.stopped ? '当前安排' : c.manual?.state === 'completed' ? '状态备注' : '下一步'), el('p', 'pc-copy', c.next)); article.append(next);}
+      if (facts.blocker) { const block = disclosure('pc:blocker:' + task.id, (c.freshness === 'current' ? '卡点 · ' : '记录卡点 · ') + (facts.blockerIsNext?'下一步 · ':'') + Array.from(facts.blocker).slice(0, 54).join('') + (Array.from(facts.blocker).length > 54 ? '…' : ''), 'pc-blocker'); block.append(el('p', 'pc-copy', facts.blocker)); article.append(block); }
+      if(facts.next){const next = el('div', 'pc-next'); next.append(el('h3', '', c.stopped ? '当前安排' : c.manual?.state === 'completed' ? '状态备注' : '下一步'), el('p', 'pc-copy', facts.next)); article.append(next);}
       renderTaskHistory(details,c.history);
       const footer = el('div', 'pc-footer'), evidence = list(task.evidence); footer.append(button(evidence.length ? `进展详情 · ${evidence.length} 项证据` : '查看进展详情', () => onTask?.(task.id), 'pc:evidence:' + task.id));
       if (task.state === 'completed' && !c.manual) footer.append(el('span', 'pc-muted', '来源完成记录'));
