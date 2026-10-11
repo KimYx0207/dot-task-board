@@ -83,7 +83,14 @@ export function createD1McpEventsStore(db) {
       ]);
     },
     async due(now,limit,maxAttempts,preferredEventId=null) {
-      const result=await db.prepare("SELECT subscription_id,event_id FROM mcp_event_outbox WHERE attempts<? AND ((state IN ('pending','retry') AND next_attempt_at<=?) OR (state='delivering' AND lease_until<=?)) ORDER BY CASE WHEN event_id=? THEN 0 ELSE 1 END,next_attempt_at,event_id,subscription_id LIMIT ?").bind(maxAttempts,now,now,preferredEventId,limit).all();
+      // Reserve the first slot for the oldest other event, then one for the new
+      // event. A short budget (or limit=1) must not starve the existing queue.
+      const result=await db.prepare(`SELECT subscription_id,event_id FROM (
+        SELECT subscription_id,event_id,next_attempt_at,
+          ROW_NUMBER() OVER (PARTITION BY event_id=? ORDER BY next_attempt_at,event_id,subscription_id) AS event_group_rank
+        FROM mcp_event_outbox WHERE attempts<? AND ((state IN ('pending','retry') AND next_attempt_at<=?) OR (state='delivering' AND lease_until<=?))
+      ) ORDER BY CASE WHEN event_group_rank=1 THEN CASE WHEN event_id=? THEN 1 ELSE 0 END ELSE 2 END,
+        next_attempt_at,event_id,subscription_id LIMIT ?`).bind(preferredEventId,maxAttempts,now,now,preferredEventId,limit).all();
       return result.results.map(row=>({subscriptionId:row.subscription_id,eventId:row.event_id}));
     },
     async claim(q) {
