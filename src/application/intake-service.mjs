@@ -1,6 +1,6 @@
 import {IntakeError,intakeDigest,normalizeIntakeSubmission,normalizeIntakeEvent} from '../domain/intake.mjs';
 import {safeText} from '../domain/snapshot.mjs';
-export function createIntakeService({store,readBoard,capabilities,clock=()=>new Date().toISOString(),newId=()=>crypto.randomUUID()}) {
+export function createIntakeService({store,readBoard,capabilities,projectEventScope=null,clock=()=>new Date().toISOString(),newId=()=>crypto.randomUUID()}) {
   function requireStore(){if(!store||capabilities.storageAvailable===false)throw new IntakeError('storage_unavailable',503,'需求保存服务尚未接入');}
   async function projectBoard(projectId){const result=await readBoard();if(result.status!==200)throw new IntakeError('board_unavailable',503,'暂时无法核对项目状态，请保留草稿后重试');if(!result.body.projectSummaries.some(p=>p.id===projectId))throw new IntakeError('unknown_project',404,'项目尚未接入需求通道');return result.body;}
   return {
@@ -24,7 +24,14 @@ export function createIntakeService({store,readBoard,capabilities,clock=()=>new 
       return {...result,requests:result.requests.map(request=>names.get(request.projectId)?{...request,projectName:names.get(request.projectId)}:request)};
     },
     async get(id,ownerId){requireStore();const result=await store.get(id,ownerId);if(!result)throw new IntakeError('request_not_found',404,'需求不存在');return result;},
-    async projects(){const result=await readBoard();if(result.status!==200)throw new IntakeError('board_unavailable',503);return {projects:[...new Map(result.body.projectSummaries.filter(p=>p.id).map(({id,name,canonicalName})=>[id,{id,name:canonicalName??name}])).values()]};},
+    async projects(ownerId){
+      const result=await readBoard();if(result.status!==200)throw new IntakeError('board_unavailable',503);
+      const projects=[...new Map(result.body.projectSummaries.filter(p=>p.id).map(({id,name,canonicalName})=>[id,{id,name:canonicalName??name}])).values()];
+      // Preserve legacy callers and adapters. Enrich only this already-visible
+      // projection; never enumerate additional projects through the diagnostic.
+      if(ownerId&&typeof projectEventScope==='function')for(const project of projects){const scope=await projectEventScope({ownerId,projectId:project.id});if(scope)project.eventScope=scope;}
+      return {projects};
+    },
     async append(id,raw,ownerId){
       requireStore();
       if(!ownerId)throw new IntakeError('authentication_required',401);

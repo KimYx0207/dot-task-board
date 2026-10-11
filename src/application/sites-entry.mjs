@@ -17,24 +17,42 @@ import {createSitesTaskControls} from './sites-task-controls.mjs';
 import {createSitesObservations} from './sites-observations.mjs';
 import {createWorker} from '../../worker.mjs';
 function sitesEventProjectReady(project){return Boolean(project&&project.acceptNewRequests!==false&&(!project.executionState||project.executionState==='active'));}
-function sitesEventAuthorized(details,env){
+// Project scope only: this is not transport, storage, subscription or delivery
+// readiness. Keep the exact existing authorization order and parsing semantics.
+function sitesEventProjectScope(projectId,env){
+ const registry=readEnvironmentProjectRegistry(env);
+ if(registry.status!=='configured')return {allowed:false,reason:registry.status==='absent'?'project_registry_absent':'project_registry_invalid'};
+ if(env.DOT_BOARD_HIDDEN_PROJECT_IDS==='')return {allowed:false,reason:'empty_hidden_configuration'};
+ let hidden;try{hidden=JSON.parse(env.DOT_BOARD_HIDDEN_PROJECT_IDS??'[]');}catch{return {allowed:false,reason:'invalid_hidden_configuration'};}
+ if(!Array.isArray(hidden))return {allowed:false,reason:'invalid_hidden_configuration'};
+ if(hidden.includes(projectId))return {allowed:false,reason:'project_hidden'};
+ const project=registry.records.find(project=>project.id===projectId);
+ if(!project)return {allowed:false,reason:'project_not_found'};
+ if(project.acceptNewRequests===false)return {allowed:false,reason:'project_requests_closed'};
+ if(project.executionState==='paused')return {allowed:false,reason:'project_paused'};
+ if(project.executionState==='deferred')return {allowed:false,reason:'project_deferred'};
+ if(project.executionState==='canceled')return {allowed:false,reason:'project_canceled'};
+ return {allowed:true,reason:'project_scope_allowed'};
+}
+export function sitesProjectEventScopeFor({ownerId,projectId},env){
+ // An optional owner-only enrichment, never a new project enumeration surface.
+ // No owner IDs, hidden lists or raw configuration leave this adapter.
+ if(!ownerId||env.DOT_BOARD_INGRESS!=='sites-owner-private-v1'||env.DOT_BOARD_INTAKE_MCP_ENABLED!=='true'||ownerId!==env.DOT_BOARD_OWNER_ID)return null;
+ return sitesEventProjectScope(projectId,env);
+}
+export function sitesEventAuthorized(details,env){
  if(env.DOT_BOARD_INGRESS!=='sites-owner-private-v1'||env.DOT_BOARD_INTAKE_MCP_ENABLED!=='true'||details.ownerId!==env.DOT_BOARD_OWNER_ID||details.name!==PROJECT_REQUEST_CREATED)return false;
  // Revocation is owner-scoped by deterministic subscription identity. Hiding or
  // stopping a project must never prevent its owner from withdrawing delivery.
  if(details.action==='unsubscribe')return true;
- const registry=readEnvironmentProjectRegistry(env);
- if(registry.status!=='configured')return false;
- if(details.action==='list')return true;
- let hidden;try{hidden=JSON.parse(env.DOT_BOARD_HIDDEN_PROJECT_IDS??'[]');}catch{return false;}
- if(!Array.isArray(hidden)||hidden.includes(details.arguments?.projectId))return false;
- const project=registry.records.find(project=>project.id===details.arguments?.projectId);
- return sitesEventProjectReady(project);
+ if(details.action==='list')return readEnvironmentProjectRegistry(env).status==='configured';
+ return sitesEventProjectScope(details.arguments?.projectId,env).allowed;
 }
 // Only for the existing owner-private Sites deployment. Sites dispatch validates
 // sign-in/OAuth and supplies the per-site identity; this is NOT a generic public
 // Worker authentication adapter. Never expose this entry behind an untrusted proxy.
 export function createSitesPrivateEntry(assets={}){
- const worker=createWorker(assets,undefined,{projectQueueProjection:false,eventDeliveryMode:'sites-direct',ownerScopedEventUnsubscribe:true,eventScopeReadyFor:env=>readEnvironmentProjectRegistry(env).records.some(sitesEventProjectReady),eventDiscoveryEnabledFor:env=>env.DOT_BOARD_INTAKE_MCP_ENABLED==='true'&&env.DOT_BOARD_EVENT_BRIDGE_ENABLED!=='true',candidateRequestEvents:true,eventTransportFor:env=>createSitesOpenAIEventTransport(env),authorizeEvent:sitesEventAuthorized,requirementsFor:env=>createSitesTaskRequirements(env),manualStatusFor:env=>createSitesManualTaskStatus(env),manualCheckFor:(env,services)=>createSitesManualCheck(env,services),taskControlsFor:env=>createSitesTaskControls(env),observationsFor:env=>createSitesObservations(env),readObservationSnapshot:async(snapshot,env,owner)=>{const controls=createSitesTaskControls(env),controlled=controls?await controls.overlay(owner,snapshot):snapshot,observations=createSitesObservations(env);const observed=observations?await observations.overlay(owner,controlled):controlled,manual=createSitesManualTaskStatus(env);const displayed=manual?await manual.overlay(owner,observed):observed;return createSitesTaskRequirements(env).overlay(owner,displayed);}});
+ const worker=createWorker(assets,undefined,{projectQueueProjection:false,eventDeliveryMode:'sites-direct',ownerScopedEventUnsubscribe:true,projectEventScopeFor:sitesProjectEventScopeFor,eventScopeReadyFor:env=>readEnvironmentProjectRegistry(env).records.some(sitesEventProjectReady),eventDiscoveryEnabledFor:env=>env.DOT_BOARD_INTAKE_MCP_ENABLED==='true'&&env.DOT_BOARD_EVENT_BRIDGE_ENABLED!=='true',candidateRequestEvents:true,eventTransportFor:env=>createSitesOpenAIEventTransport(env),authorizeEvent:sitesEventAuthorized,requirementsFor:env=>createSitesTaskRequirements(env),manualStatusFor:env=>createSitesManualTaskStatus(env),manualCheckFor:(env,services)=>createSitesManualCheck(env,services),taskControlsFor:env=>createSitesTaskControls(env),observationsFor:env=>createSitesObservations(env),readObservationSnapshot:async(snapshot,env,owner)=>{const controls=createSitesTaskControls(env),controlled=controls?await controls.overlay(owner,snapshot):snapshot,observations=createSitesObservations(env);const observed=observations?await observations.overlay(owner,controlled):controlled,manual=createSitesManualTaskStatus(env);const displayed=manual?await manual.overlay(owner,observed):observed;return createSitesTaskRequirements(env).overlay(owner,displayed);}});
  return {async fetch(request,env={},ctx={}){
   const setupPath=new URL(request.url).pathname;
   if(setupPath==='/setup'||setupPath==='/api/setup/identity')return sitesIdentitySetupResponse(request,env);

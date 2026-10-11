@@ -10,6 +10,16 @@
 
 仓库提供这些接口源码与合成测试，但获取源码不会连接原生执行宿主或启动自动任务。Sites 已将所有者认证的 Events 发现与受策略控制的直接投递分开。标准安装保持投递关闭；直接路径需要独立核实的运行时、路由、精确 origin 证据及真实原生订阅。Sites 定时处理仍明确禁用。独立中继桥接仍需另外的私有配置和验收，标准安装不启用它。详见 [Sites 直接 Events](sites-direct-events.md)。
 
+### 只读的项目 Events scope 诊断
+
+在 owner-private Sites 中，`list_request_projects` 可为原有可见列表中的每个项目附加 `eventScope: {allowed, reason}`。Events 订阅/投递授权与该诊断共用项目 scope 判断；不会返回 owner 身份、registry 原文、隐藏项目清单、callback URL 或凭据，也没有新增查询参数。隐藏、已移除、未注册或原来未列出的项目不会为诊断而补入。通用 Worker 或未安装适配器的服务保持 `{id, name}` 旧形状；安装适配器后的默认 `projects()` 调用也保持原形状。
+
+`allowed: true` 和 `project_scope_allowed` 只表示当前项目的 registry、可见性、需求开关与执行状态允许 Events scope。投递开关、入口认证、存储、callback 策略、订阅验证与真实收件仍是独立条件。任务 completed 不是项目 Events 门禁。读取诊断不会创建需求、订阅、outbox、callback 或执行。
+
+固定拒绝原因包括 `project_registry_absent`、`project_registry_invalid`、`empty_hidden_configuration`、`invalid_hidden_configuration`、`project_hidden`、`project_not_found`、`project_requests_closed`、`project_paused`、`project_deferred`、`project_canceled`。判断顺序保留为 registry、隐藏配置及成员关系、项目存在、显式关闭新需求、执行状态；未设置需求/执行状态字段仍按原默认允许处理。隐藏/缺席项目原因仅是内部判断结果，不允许将这些项目暴露到列表。
+
+此诊断有意保留现有行为：隐藏项目配置为空字符串时，列表仍可能可读，但订阅/投递拒绝并给出 `empty_hidden_configuration`；此次不修正已有全局 readiness 摘要。格式错误、非数组、无效 ID 或过长的隐藏配置继续在私站入口返回 `invalid_visibility_configuration`（HTTP 503），不返回任何项目诊断。Events list 与 owner-scoped unsubscribe 保持原授权顺序，不附加订阅/投递 scope 门禁。该诊断不代表真实原生投递已验收。
+
 ## dot 定时接续
 
 维护者的线上部署于2026年10月9日完成了一项限定范围的两轮验收：自然定时触发后，沿同一个原生线上任务完成真实展示修复、测试、发布和结果回读；下一自然轮仅核查已完成结果，没有重复写入。这验证的是该宿主原生接续路径，不等于本地电脑派发、cloud_threads 请求/队列链、全部项目或外部回调已通过。

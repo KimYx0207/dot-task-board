@@ -45,7 +45,7 @@ export function createWorker(assets,config=boardConfig,runtime={}) {
       if(snapshot&&queueAvailable&&ownerId&&runtime.projectQueueProjection!==false){const projection=await queueStore.projectionInputs(ownerId,Math.max(0,config.maxTasks-snapshot.tasks.length));snapshot=projectDispatchJobs(snapshot,projection.jobs,projection.requests,registry.records,{maxTasks:config.maxTasks,maxAgents:config.maxAgents,totalJobs:await queueStore.count(ownerId),now:runtime.clock?.()??Date.now(),projectTotals:projectAccountingView(await queueStore.projectAccounting(ownerId),registry.records,runtime.clock?.()??Date.now())});}
       return snapshot;
     };
-    const service=createIntakeService({store,readBoard:()=>readBoard(readSnapshot,config),capabilities,clock:runtime.clock,newId:runtime.newId});
+    const service=createIntakeService({store,readBoard:()=>readBoard(readSnapshot,config),capabilities,projectEventScope:runtime.projectEventScopeFor?details=>runtime.projectEventScopeFor(details,env):null,clock:runtime.clock,newId:runtime.newId});
     const baseCandidateStore=createD1CandidateStore(env.DB,{eventStore:runtime.candidateRequestEvents?event.eventStore:null});
     const candidateStore=baseCandidateStore?{...baseCandidateStore,async review(...args){const saved=await baseCandidateStore.review(...args);if(runtime.candidateRequestEvents&&!saved.replayed&&saved.candidate?.requestId)createdRequestId=saved.candidate.requestId;return saved;}}:null,candidateStorageAvailable=storageAvailable&&Boolean(candidateStore)&&await candidateStore.available();
     const candidateCaps=candidateCapabilities(capabilities,candidateStorageAvailable);
