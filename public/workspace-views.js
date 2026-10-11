@@ -41,3 +41,39 @@ export function renderCapabilityState(container,{config=null,intake=null}={}) {
     ['候选审批',candidateReadsAvailable(config)?(config?.candidateCapabilities?.canReview===false?'可读取 · 审批暂不可用':'候选存储已启用'):config?'尚未启用':'正在核验','已有候选可独立回读；批准只保存 received 需求，不启动执行。'],
     ['Sites 直接 Events 执行','未接通','不影响普通需求回执或候选存储。队列及自动接续仍须独立授权、接入与验收。']]){const item=el('div','capability-item');item.append(el('h3','',name),el('strong','',state),el('p','',note));grid.append(item);}root.append(grid);container.replaceChildren(root);
 }
+
+// Only explicit human decisions belong above the project work. Ordinary saved/read
+// requests stay in the demand history; a blocked task alone is not an approval.
+export function decisionProjectId(projects, selectedName='') {
+  if(!selectedName)return null;
+  const matches=list(projects).filter(item=>list(item.names).includes(selectedName));
+  return matches.length===1&&typeof matches[0].id==='string'&&matches[0].id?matches[0].id:'';
+}
+export function workspaceDecisions({inbox=null,candidates=null,candidateEnabled=false,projectId=null}={}) {
+  const inProject=item=>projectId===null||item.projectId===projectId;
+  return {
+    requests:list(inbox?.requests).filter(item=>item.status==='needs_confirmation'&&inProject(item)),
+    candidates:candidateEnabled?list(candidates?.records).filter(item=>item.status==='proposed'&&inProject(item)):[],
+    candidatePartial:Boolean(candidateEnabled&&candidates?.nextCursor),
+    requestPartial:Boolean(inbox?.nextCursor)
+  };
+}
+const decisionDisclosure=new WeakMap();
+export function renderWorkspaceDecisions(container,{onRequest=()=>{},onCandidates=()=>{},onRequestHistory=()=>{},onRetryRequests=()=>{},onRetryCandidates=()=>{},inboxError='',inboxLoading=false,...data}={}) {
+  const {el,button}=dom(container),decisions=workspaceDecisions(data),count=decisions.requests.length+decisions.candidates.length;
+  const candidateError=data.candidateEnabled&&data.candidates?.error,readError=Boolean(inboxError||candidateError);
+  container.hidden=!count&&!decisions.candidatePartial&&!decisions.requestPartial&&!readError;if(container.hidden){container.replaceChildren();return;}
+  const root=el('div','workspace-decisions'),heading=el('h2','',count?'需要你决定':readError?'待决定记录暂不可用':'还有记录待查看');root.append(heading);
+  const entries=el('div','workspace-decision-items');
+  if(decisions.candidates.length)entries.append(button(`${decisions.candidates.length} 项候选待审批${decisions.candidatePartial?' · 还有记录待查看':''}`,onCandidates,'decisions:candidates'));
+  else if(decisions.candidatePartial)entries.append(button('查看其余候选记录',onCandidates,'decisions:candidates'));
+  if(decisions.requestPartial)entries.append(button('查看其余需求记录',onRequestHistory,'decisions:request-history'));
+  const row=request=>{const item=el('div','workspace-decision-row'),body=Array.from(safe(request.body)||'查看待确认需求'),label=body.slice(0,90).join('')+(body.length>90?'…':'');item.append(button(label,()=>onRequest(request),'decisions:request:'+request.id),el('span','wv-muted',safe(request.projectName)));return item;};
+  for(const request of decisions.requests.slice(0,2))entries.append(row(request));
+  if(decisions.requests.length>2){const more=el('details','workspace-decision-more'),summary=el('summary','',`另外 ${decisions.requests.length-2} 项待确认`);summary.dataset.focusKey='decisions:more';more.open=decisionDisclosure.get(container)===true;more.addEventListener('toggle',()=>decisionDisclosure.set(container,more.open));more.append(summary,...decisions.requests.slice(2).map(row));entries.append(more);}
+  if(inboxError){const retry=button(inboxLoading?'读取中…':'重试读取需求',onRetryRequests,'decisions:retry-requests');retry.disabled=inboxLoading;entries.append(retry);}
+  if(candidateError){const retry=button(data.candidates.loading?'读取中…':'重试读取候选',onRetryCandidates,'decisions:retry-candidates');retry.disabled=data.candidates.loading;entries.append(retry);}
+  root.append(entries);
+  if(inboxError&&(decisions.requests.length||decisions.requestPartial)||data.candidates?.error&&(decisions.candidates.length||decisions.candidatePartial))root.append(el('p','wv-muted','暂时无法更新，以上保留上次读取的待决定事项。'));
+  container.replaceChildren(root);
+}

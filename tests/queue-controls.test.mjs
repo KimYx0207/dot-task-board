@@ -106,8 +106,9 @@ test('real projects precede separately collapsed historical dispatch records on 
   const html=readFileSync(new URL('../public/index.html',import.meta.url),'utf8'),app=readFileSync(new URL('../public/app.js',import.meta.url),'utf8');
   assert(html.indexOf('id="workspace"')<html.indexOf('id="managed-queue"'));
   assert(html.indexOf('id="observation-panel"')<html.indexOf('id="managed-queue"'));
-  assert(html.indexOf('id="observation-panel"')<html.indexOf('class="view-toolbar"'));
-  assert.match(html,/<details id="observation-panel" class="observation-panel" open>/);
+  assert(html.indexOf('id="workspace-filters"')<html.indexOf('id="observation-panel"'));
+  assert.match(html,/<div id="observation-panel" class="observation-panel"/);
+  assert.match(html,/<details class="history-panel"><summary>执行记录与历史验收<\/summary>/);
   assert.equal((html.match(/id="managed-queue"/g)??[]).length,1);
   assert(app.includes("createQueueControls($('managed-queue'),{requestJson,"));
   for(const id of ['request-project','request-context-task','request-body','inspector'])assert(html.includes(`id="${id}"`));

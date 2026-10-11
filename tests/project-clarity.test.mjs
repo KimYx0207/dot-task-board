@@ -133,7 +133,7 @@ test('missing and stale activity observations remain explicit rather than a zero
 });
 test('registered wording never claims that every imported task was verified',async()=>{
  const app=await readFile(new URL('../public/app.js',import.meta.url),'utf8'),html=await readFile(new URL('../public/index.html',import.meta.url),'utf8');
- assert.doesNotMatch(app,/项已核对任务/);assert.match(app,/项登记任务/);assert.match(html,/已登记项目与任务/);assert.match(app,/本页队列不会自行执行/);assert.match(app,/另行配置并授权的 dot 检查沿原任务推进/);assert.match(app,/本地自动派发仍待验收/);assert.doesNotMatch(app,/自动唤醒与续跑尚未接通/);
+ assert.doesNotMatch(app,/项已核对任务/);assert.match(await readFile(new URL('../public/project-clarity.js',import.meta.url),'utf8'),/项登记任务/);assert.match(html,/已登记项目与任务/);assert.match(app,/本页队列不会自行执行/);assert.match(app,/另行配置并授权的 dot 检查沿原任务推进/);assert.match(app,/本地自动派发仍待验收/);assert.doesNotMatch(app,/自动唤醒与续跑尚未接通/);
 });
 
 
@@ -162,7 +162,7 @@ test('empty inbox discloses its narrow lifecycle scope without completing projec
 test('stale synthetic import preserves the original version and totals under an explicit historical source label',()=>{
  const b=input(),task=b.tasks[0];Object.assign(task,{id:'synthetic-history-task',project:'Synthetic board',observedAt:'2026-10-08T04:54:05Z',observation:'示例旧版 v2 导入记录：4项目、6任务、3名负责人。',assignedAgentIds:[]});b.projects=[task.project];b.agents=[];
  const before=structuredClone(b),root=setup();renderProjectClarity(root,b,null,{now});const progress=nodes(root,'pc-progress')[0];
- assert.equal(progress.children[0].textContent,'历史导入记录');assert.match(progress.textContent,/不代表当前部署统计/);assert.match(progress.textContent,/也不是自动接续验收结果/);
+ assert.equal(progress.children[0].textContent,'历史导入记录');assert.match(nodes(root,'pc-task-details')[0].textContent,/不代表当前部署统计/);assert.match(nodes(root,'pc-task-details')[0].textContent,/也不是自动接续验收结果/);
  assert.equal(nodes(progress,'pc-copy')[0].textContent,task.observation);assert.match(progress.textContent,/v2.*4项目、6任务、3名/);assert.doesNotMatch(progress.textContent,/最新进展|当前版本 v99/);
  assert.equal(nodes(root,'pc-status')[0].textContent,'部分完成');assert.equal(nodes(root,'pc-task')[0].dataset.taskId,'synthetic-history-task');assert.deepEqual(b,before);
 });

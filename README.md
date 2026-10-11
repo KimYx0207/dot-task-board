@@ -32,19 +32,19 @@ The screenshots below are captured from this version's running interface using e
 
 #### 1. Projects keep tasks and agent roles together
 
-Review goals, acceptance criteria, progress and blockers within the original project. The four author links and existing task controls remain available.
+Open directly to projects and their latest progress, with current blockers visible. Requests that need your decision appear separately, and one main button adds a new request. Goals, source records, filters and diagnostics remain available in expandable details; each project keeps its task owners together.
 
 ![Project workspace with synthetic tasks, requirements and agent roles](docs/images/workspace-overview.png)
 
 #### 2. Review a suggestion before saving a request
 
-Read its source, reason, expected outcome, deadline and project. Approval saves one received request with a durable receipt. Starting execution is a separate step.
+Review the title, reason and expected outcome, then approve or decline. Expand the supporting details for sources, deadline and the original context. Approval saves one received request with a durable receipt. Starting execution is a separate step.
 
 ![Candidate approval with synthetic source, expected outcome and decision controls](docs/images/candidate-approval.png)
 
 #### 3. Find result references and see connection requirements
 
-Results show recorded source URLs. The capability panel distinguishes working storage from the host connection required for direct Events execution.
+Results keep recorded source URLs together. Expand connection details when you need to check host setup or continuation diagnostics; they do not crowd the project homepage.
 
 ![Synthetic result reference and connection status showing direct Sites Events execution is not connected](docs/images/results-capabilities.png)
 
@@ -69,7 +69,7 @@ Version 0.2.0 supports private online deployment with your own account and autho
 ### 0.3.0 preview: review suggestions before they become requests
 
 - **Approvals:** keep a suggestion's source, reason, expected result, deadline and project together. Approve it to save one request, or decline it with a note.
-- **Projects, tasks and results:** separate navigation keeps the main view focused while preserving each project's task owners and result records.
+- **Projects first:** latest progress and decisions are visible first; filters, raw records and technical details expand on demand. Task owners and result records stay grouped by project.
 - **Continue the original task:** the session client can inspect the selected request and original session before reserving capacity. Missing connections and blocked states stay visible.
 
 Approval saves a request for dot to read. Execution uses the installation's connected host and its actual permissions. [Workflow and setup details](docs/candidate-workflow.md) explain these separate steps.
