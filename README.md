@@ -74,7 +74,7 @@ Version 0.2.0 supports private online deployment with your own account and autho
 
 Approval saves a request for dot to read. Execution uses the installation's connected host and its actual permissions. [Workflow and setup details](docs/candidate-workflow.md) explain these separate steps.
 
-**Sites event connection:** the owner-authenticated plugin can discover `project_request.created` separately from enabling delivery. Configured installations save request events atomically and attempt bounded immediate webhook delivery. Live delivery requires a verified public-egress runtime policy, the native callback and an authorized project subscription. [Connect Sites Events](docs/sites-direct-events.md) covers setup, delivery status and pending retries; delivery receipts remain separate from task execution.
+**Sites event connection:** the owner-authenticated plugin can discover `project_request.created` separately from enabling delivery. Configured installations save request events atomically and attempt bounded immediate webhook delivery. Live delivery requires a verified public-egress runtime policy, the native callback and an authorized project subscription. A separate, default-empty deployment allowlist can permit request notifications for selected deferred projects without changing their execution permissions. [Connect Sites Events](docs/sites-direct-events.md) covers setup, delivery status and pending retries; delivery receipts remain separate from task execution.
 
 ### Version 0.2.0: projects, requirements and continuation
 

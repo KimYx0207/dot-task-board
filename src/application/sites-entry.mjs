@@ -1,6 +1,7 @@
 import {readEnvironmentProjectRegistry} from '../adapters/project-registry.mjs';
 import {createSitesOpenAIEventTransport} from '../adapters/sites-openai-event-transport.mjs';
 import {PROJECT_REQUEST_CREATED} from '../domain/mcp-events.mjs';
+import {intakeId} from '../domain/intake.mjs';
 import {createSitesTaskRequirements} from './sites-task-requirements.mjs';
 import {sitesIdentitySetupResponse} from './sites-setup-identity.mjs';
 import {applySitesVisibility} from '../adapters/sites-visibility.mjs';
@@ -16,9 +17,19 @@ import {readIntakeJson} from '../presentation/intake-http.mjs';
 import {createSitesTaskControls} from './sites-task-controls.mjs';
 import {createSitesObservations} from './sites-observations.mjs';
 import {createWorker} from '../../worker.mjs';
-function sitesEventProjectReady(project){return Boolean(project&&project.acceptNewRequests!==false&&(!project.executionState||project.executionState==='active'));}
+function sitesRequestNotificationProjects(env){
+ const raw=env.DOT_BOARD_REQUEST_NOTIFICATION_PROJECT_IDS;
+ if(raw===undefined||raw==='')return [];
+ if(typeof raw!=='string'||new TextEncoder().encode(raw).byteLength>32768)return null;
+ try{
+  const ids=JSON.parse(raw);
+  if(!Array.isArray(ids)||ids.length>200||ids.some(id=>!intakeId(id))||new Set(ids).size!==ids.length)return null;
+  return ids;
+ }catch{return null;}
+}
 // Project scope only: this is not transport, storage, subscription or delivery
-// readiness. Keep the exact existing authorization order and parsing semantics.
+// readiness or execution permission. The deployment allowlist only relaxes the
+// deferred notification gate; existing active-project semantics stay unchanged.
 function sitesEventProjectScope(projectId,env){
  const registry=readEnvironmentProjectRegistry(env);
  if(registry.status!=='configured')return {allowed:false,reason:registry.status==='absent'?'project_registry_absent':'project_registry_invalid'};
@@ -30,7 +41,11 @@ function sitesEventProjectScope(projectId,env){
  if(!project)return {allowed:false,reason:'project_not_found'};
  if(project.acceptNewRequests===false)return {allowed:false,reason:'project_requests_closed'};
  if(project.executionState==='paused')return {allowed:false,reason:'project_paused'};
- if(project.executionState==='deferred')return {allowed:false,reason:'project_deferred'};
+ if(project.executionState==='deferred'){
+  const notifications=sitesRequestNotificationProjects(env);
+  if(notifications===null)return {allowed:false,reason:'invalid_notification_configuration'};
+  return notifications.includes(projectId)?{allowed:true,reason:'project_notification_allowed'}:{allowed:false,reason:'project_deferred'};
+ }
  if(project.executionState==='canceled')return {allowed:false,reason:'project_canceled'};
  return {allowed:true,reason:'project_scope_allowed'};
 }
@@ -52,7 +67,7 @@ export function sitesEventAuthorized(details,env){
 // sign-in/OAuth and supplies the per-site identity; this is NOT a generic public
 // Worker authentication adapter. Never expose this entry behind an untrusted proxy.
 export function createSitesPrivateEntry(assets={}){
- const worker=createWorker(assets,undefined,{projectQueueProjection:false,eventDeliveryMode:'sites-direct',ownerScopedEventUnsubscribe:true,projectEventScopeFor:sitesProjectEventScopeFor,eventScopeReadyFor:env=>readEnvironmentProjectRegistry(env).records.some(sitesEventProjectReady),eventDiscoveryEnabledFor:env=>env.DOT_BOARD_INTAKE_MCP_ENABLED==='true'&&env.DOT_BOARD_EVENT_BRIDGE_ENABLED!=='true',candidateRequestEvents:true,eventTransportFor:env=>createSitesOpenAIEventTransport(env),authorizeEvent:sitesEventAuthorized,requirementsFor:env=>createSitesTaskRequirements(env),manualStatusFor:env=>createSitesManualTaskStatus(env),manualCheckFor:(env,services)=>createSitesManualCheck(env,services),taskControlsFor:env=>createSitesTaskControls(env),observationsFor:env=>createSitesObservations(env),readObservationSnapshot:async(snapshot,env,owner)=>{const controls=createSitesTaskControls(env),controlled=controls?await controls.overlay(owner,snapshot):snapshot,observations=createSitesObservations(env);const observed=observations?await observations.overlay(owner,controlled):controlled,manual=createSitesManualTaskStatus(env);const displayed=manual?await manual.overlay(owner,observed):observed;return createSitesTaskRequirements(env).overlay(owner,displayed);}});
+ const worker=createWorker(assets,undefined,{projectQueueProjection:false,eventDeliveryMode:'sites-direct',ownerScopedEventUnsubscribe:true,projectEventScopeFor:sitesProjectEventScopeFor,eventScopeReadyFor:env=>readEnvironmentProjectRegistry(env).records.some(project=>sitesEventProjectScope(project.id,env).allowed),eventDiscoveryEnabledFor:env=>env.DOT_BOARD_INTAKE_MCP_ENABLED==='true'&&env.DOT_BOARD_EVENT_BRIDGE_ENABLED!=='true',candidateRequestEvents:true,eventTransportFor:env=>createSitesOpenAIEventTransport(env),authorizeEvent:sitesEventAuthorized,requirementsFor:env=>createSitesTaskRequirements(env),manualStatusFor:env=>createSitesManualTaskStatus(env),manualCheckFor:(env,services)=>createSitesManualCheck(env,services),taskControlsFor:env=>createSitesTaskControls(env),observationsFor:env=>createSitesObservations(env),readObservationSnapshot:async(snapshot,env,owner)=>{const controls=createSitesTaskControls(env),controlled=controls?await controls.overlay(owner,snapshot):snapshot,observations=createSitesObservations(env);const observed=observations?await observations.overlay(owner,controlled):controlled,manual=createSitesManualTaskStatus(env);const displayed=manual?await manual.overlay(owner,observed):observed;return createSitesTaskRequirements(env).overlay(owner,displayed);}});
  return {async fetch(request,env={},ctx={}){
   const setupPath=new URL(request.url).pathname;
   if(setupPath==='/setup'||setupPath==='/api/setup/identity')return sitesIdentitySetupResponse(request,env);

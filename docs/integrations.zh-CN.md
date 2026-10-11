@@ -14,11 +14,19 @@
 
 在 owner-private Sites 中，`list_request_projects` 可为原有可见列表中的每个项目附加 `eventScope: {allowed, reason}`。Events 订阅/投递授权与该诊断共用项目 scope 判断；不会返回 owner 身份、registry 原文、隐藏项目清单、callback URL 或凭据，也没有新增查询参数。隐藏、已移除、未注册或原来未列出的项目不会为诊断而补入。通用 Worker 或未安装适配器的服务保持 `{id, name}` 旧形状；安装适配器后的默认 `projects()` 调用也保持原形状。
 
-`allowed: true` 和 `project_scope_allowed` 只表示当前项目的 registry、可见性、需求开关与执行状态允许 Events scope。投递开关、入口认证、存储、callback 策略、订阅验证与真实收件仍是独立条件。任务 completed 不是项目 Events 门禁。读取诊断不会创建需求、订阅、outbox、callback 或执行。
+`allowed: true` 和 `project_scope_allowed` 只表示当前 active 项目的范围允许 Events。`project_notification_allowed` 表示延后项目获得独立的部署级需求通知许可，其执行状态仍为 deferred。这两个原因都不授予执行权限。投递开关、入口认证、存储、callback 策略、订阅验证与真实收件仍是独立条件。任务 completed 不是项目 Events 门禁。读取诊断不会创建需求、订阅、outbox、callback 或执行。
 
-固定拒绝原因包括 `project_registry_absent`、`project_registry_invalid`、`empty_hidden_configuration`、`invalid_hidden_configuration`、`project_hidden`、`project_not_found`、`project_requests_closed`、`project_paused`、`project_deferred`、`project_canceled`。判断顺序保留为 registry、隐藏配置及成员关系、项目存在、显式关闭新需求、执行状态；未设置需求/执行状态字段仍按原默认允许处理。隐藏/缺席项目原因仅是内部判断结果，不允许将这些项目暴露到列表。
+固定拒绝原因包括 `project_registry_absent`、`project_registry_invalid`、`empty_hidden_configuration`、`invalid_hidden_configuration`、`project_hidden`、`project_not_found`、`project_requests_closed`、`project_paused`、`project_deferred`、`project_canceled`、`invalid_notification_configuration`。判断顺序保留为 registry、隐藏配置及成员关系、项目存在、显式关闭新需求、执行状态，以及仅适用于 deferred 的通知白名单；未设置需求/执行状态字段仍按原默认允许处理。隐藏/缺席项目原因仅是内部判断结果，不允许将这些项目暴露到列表。
 
-此诊断有意保留现有行为：隐藏项目配置为空字符串时，列表仍可能可读，但订阅/投递拒绝并给出 `empty_hidden_configuration`；此次不修正已有全局 readiness 摘要。格式错误、非数组、无效 ID 或过长的隐藏配置继续在私站入口返回 `invalid_visibility_configuration`（HTTP 503），不返回任何项目诊断。Events list 与 owner-scoped unsubscribe 保持原授权顺序，不附加订阅/投递 scope 门禁。该诊断不代表真实原生投递已验收。
+此诊断有意保留现有行为：隐藏项目配置为空字符串时，列表仍可能可读，但订阅/投递拒绝并给出 `empty_hidden_configuration`；全局 `canSubscribe` 现与此共用同一判断，没有合格项目时也保持 false。格式错误、非数组、无效 ID 或过长的隐藏配置继续在私站入口返回 `invalid_visibility_configuration`（HTTP 503），不返回任何项目诊断。Events list 与 owner-scoped unsubscribe 保持原授权顺序，不附加订阅/投递 scope 门禁。该诊断不代表真实原生投递已验收。
+
+### 延后项目的需求通知
+
+`DOT_BOARD_REQUEST_NOTIFICATION_PROJECT_IDS` 是仅在部署侧设置的 JSON 数组，值为区分大小写的精确注册项目 ID，例如 `["demo-deferred"]`。未设置、空字符串或 `[]` 不授予延后例外。输入最多 32 KiB（UTF-8），数组最多 200 个不重复的 ID。每个 ID 为 1–100 个 ASCII 字母、数字或 `_.:-`，首字符必须为字母或数字，不能含空白。无效 JSON、错误类型、对象包裹或非字符串条目、无效 ID、重复及超限均拒绝全部延后例外。即使此可选配置无效，active 项目的原有行为仍不变。源码没有内置项目 ID，请求参数不能改写或替代部署配置。
+
+白名单中的项目仍必须存在、在配置的 audience 下对认证所有者可见、接受新需求，且执行状态为 `deferred`。`paused` 和 `canceled` 始终拒绝。该配置只影响 `project_request.created` 通知及共用的项目诊断/就绪判断，不改变 registry 执行状态、派发准入、任务控制、队列容量、资源锁、原线程绑定或回调传输策略。
+
+订阅前、挑战完成后及每次投递均重读当前授权，使用缓存验证刷新订阅时也一样。新配置生效后，移除 ID 会拒绝后续准入；下次获准的 drain 检查到待投递项时，会撤销订阅并取消相应投递。已发送的回调无法撤回，此配置也不安装 drain 定时器；若需立即撤销存储中的订阅，应明确执行 unsubscribe。移除白名单、隐藏或删除项目后，所有者仍可取消订阅。重新加入 ID 不会复活已撤销订阅。通知白名单不能证明接收的原生聊天身份或实际送达，这些仍需原生订阅及独立的真实回执验证。
 
 ## dot 定时接续
 
