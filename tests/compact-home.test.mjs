@@ -93,7 +93,7 @@ test('candidate actions precede collapsed source details and optional notes surv
   for(const copy of [candidate.title,candidate.reason,candidate.expectedOutcome,'批准并保存需求','拒绝'])assert(visible.includes(copy),copy);
   for(const copy of ['https://example.com/source','sha256:synthetic-revision','Synthetic area','关联任务'])assert(!visible.includes(copy),copy);
   assert.equal(context.open,false);assert.equal(note.open,false);assert(detail.children.indexOf(nodes(root,'cw-review-actions')[0])<detail.children.indexOf(context));
-  assert.match(visibleText(root),/批准只保存需求，实际执行另需授权/);assert.match(context.textContent,/不入执行队列，也不调用 Events/);
+  assert.match(visibleText(root),/批准只保存需求，实际执行另需授权/);assert.match(context.textContent,/不直接进入执行队列/);
   context.open=true;context.events.toggle();note.open=true;note.events.toggle();const input=walk(note).find(node=>node.tagName==='TEXTAREA');input.value='Keep this decision note';input.events.input();renderCandidateWorkspace(root,controller,options);
   assert.equal(nodes(root,'cw-context-details')[0].open,true);assert.equal(nodes(root,'cw-review-note')[0].open,true);assert.equal(walk(nodes(root,'cw-review-note')[0]).find(node=>node.tagName==='TEXTAREA').value,'Keep this decision note');
   assert(calls.every(([,options])=>options===undefined));

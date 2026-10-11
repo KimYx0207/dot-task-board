@@ -9,8 +9,12 @@ const configured=transport=>transport?.kind==='platform-managed-public-https-v1'
 async function requestCallback(transport,url,options) {
   if(!configured(transport))throw new McpEventsError('event_transport_disabled',503,-32014);
   const parsed=new URL(validateCallbackUrl(url));
-  const {readBody=false,...requestOptions}=options;
+  await transport.validateCallback?.(parsed.href);
+  const {readBody=false,signal:parentSignal,...requestOptions}=options;
   const controller=new AbortController(); let timer;
+  const abort=()=>controller.abort();
+  if(parentSignal?.aborted)throw callbackError('callback_timeout','timeout');
+  parentSignal?.addEventListener('abort',abort,{once:true});
   const timeout=new Promise((_,reject)=>{timer=setTimeout(()=>{controller.abort();reject(callbackError('callback_timeout','timeout'));},EVENT_LIMITS.requestTimeoutMs);});
   try {
     return await Promise.race([timeout,(async()=>{
@@ -45,7 +49,7 @@ async function requestCallback(transport,url,options) {
     if(error instanceof McpEventsError)throw error;
     const reason=error?.name==='AbortError'||error?.code==='ETIMEDOUT'?'timeout':error?.code==='ERR_TLS_CERT_ALTNAME_INVALID'?'tls_error':'connection_refused';
     throw callbackError('callback_unreachable',reason);
-  } finally {clearTimeout(timer);}
+  } finally {clearTimeout(timer);parentSignal?.removeEventListener('abort',abort);}
 }
 async function headersFor(subscription,id,body,nowMs) {
   const timestamp=String(Math.floor(nowMs/1000));
@@ -76,6 +80,8 @@ export function createMcpEventsService({store,transport,clock=()=>new Date().toI
       await access(ownerId,value.name,value.arguments,'subscribe');
       requireStore();
       if(!configured(transport))throw new McpEventsError('event_transport_disabled',503,-32014);
+      // Cached challenge success never bypasses a changed deployment/origin policy.
+      await transport.validateCallback?.(value.url);
       const id=await subscriptionIdentity(ownerId,value),startedAt=nowMs();
       let verifiedUntil=await safeStorage(()=>store.getVerification(ownerId,value.url,value.secret,iso(startedAt)));
       if(!verifiedUntil) {
@@ -90,6 +96,7 @@ export function createMcpEventsService({store,transport,clock=()=>new Date().toI
       }
       // Authorization may have been withdrawn while a callback challenge was pending.
       await access(ownerId,value.name,value.arguments,'subscribe');
+      await transport.validateCallback?.(value.url);
       const savedAt=nowMs(),expiresAt=iso(savedAt+value.ttlMs);
       await safeStorage(()=>store.saveSubscription({...value,id,ownerId,expiresAt,verifiedUntil,now:iso(savedAt),rotationUntil:iso(savedAt+EVENT_LIMITS.rotationMs)}));
       return {id,refreshBefore:expiresAt,cursor:null,truncated:false};
@@ -109,49 +116,63 @@ export function createMcpEventsService({store,transport,clock=()=>new Date().toI
       requireStore();
       return safeStorage(()=>store.enqueue(raw));
     },
-    async drain({limit=EVENT_LIMITS.maxDrain}={}) {
+    async drain({limit=EVENT_LIMITS.maxDrain,budgetMs=null,preferredEventId=null}={}) {
       if(!Number.isSafeInteger(limit)||limit<1||limit>EVENT_LIMITS.maxDrain)throw new McpEventsError('invalid_drain_limit');
+      if(preferredEventId!==null&&(typeof preferredEventId!=='string'||!/^[a-zA-Z0-9][a-zA-Z0-9_.:-]{0,159}$/.test(preferredEventId)))throw new McpEventsError('invalid_preferred_event');
+      if(budgetMs!==null&&(!Number.isSafeInteger(budgetMs)||budgetMs<1||budgetMs>25000))throw new McpEventsError('invalid_drain_budget');
       requireStore();
       const result={processed:0,delivered:0,retried:0,failed:0,canceled:0,disabled:!configured(transport)};
       if(result.disabled)return result;
+      const controller=new AbortController();let timer;
+      const checkBudget=()=>{if(controller.signal.aborted)throw new McpEventsError('drain_budget_exhausted',503,-32603);};
+      const drainStorage=async action=>{checkBudget();const value=await safeStorage(action);checkBudget();return value;};
+      const run=async()=>{
       const firstNow=iso(nowMs());
-      await safeStorage(()=>store.maintain(firstNow,EVENT_LIMITS.maxAttempts));
-      const due=await safeStorage(()=>store.due(firstNow,limit,EVENT_LIMITS.maxAttempts));
+      await drainStorage(()=>store.maintain(firstNow,EVENT_LIMITS.maxAttempts));
+      const due=await drainStorage(()=>store.due(firstNow,limit,EVENT_LIMITS.maxAttempts,preferredEventId));
       for(const item of due) {
+        checkBudget();
         const claimedAt=nowMs();
-        const job=await safeStorage(()=>store.claim({...item,now:iso(claimedAt),leaseUntil:iso(claimedAt+EVENT_LIMITS.leaseMs),token:newId(),maxAttempts:EVENT_LIMITS.maxAttempts}));
+        const job=await drainStorage(()=>store.claim({...item,now:iso(claimedAt),leaseUntil:iso(claimedAt+EVENT_LIMITS.leaseMs),token:newId(),maxAttempts:EVENT_LIMITS.maxAttempts}));
         if(!job)continue;
         result.processed++;
         const finish=async(state,reason)=>{
           const time=nowMs();
           const nextAttemptAt=iso(time+Math.min(60000,1000*2**(job.attempts-1)));
-          await safeStorage(()=>store.finish({...job,state,reason,nextAttemptAt,now:iso(time)}));
+          await drainStorage(()=>store.finish({...job,state,reason,nextAttemptAt,now:iso(time)}));
           result[state==='delivered'?'delivered':state==='retry'?'retried':state==='canceled'?'canceled':'failed']++;
         };
         const retry=reason=>finish(job.attempts>=EVENT_LIMITS.maxAttempts?'failed':'retry',job.attempts>=EVENT_LIMITS.maxAttempts?'attempts_exhausted':reason);
-        let sub=await safeStorage(()=>store.getSubscription(job.subscriptionId,job.ownerId));
+        let sub=await drainStorage(()=>store.getSubscription(job.subscriptionId,job.ownerId));
         if(!sub?.active||Date.parse(sub.expiresAt)<=nowMs()) {await finish('canceled','subscription_expired');continue;}
         let allowed;
         try {allowed=await authorize({ownerId:sub.ownerId,name:sub.name,arguments:sub.arguments,action:'deliver'});} catch {await retry('authorization_unavailable');continue;}
-        if(!allowed) {await safeStorage(()=>store.revoke(sub.ownerId,sub.id,iso(nowMs()),'access_revoked'));result.canceled++;continue;}
-        sub=await safeStorage(()=>store.getSubscription(job.subscriptionId,job.ownerId));
+        if(!allowed) {await drainStorage(()=>store.revoke(sub.ownerId,sub.id,iso(nowMs()),'access_revoked'));result.canceled++;continue;}
+        sub=await drainStorage(()=>store.getSubscription(job.subscriptionId,job.ownerId));
         if(!sub?.active||Date.parse(sub.expiresAt)<=nowMs()) {await finish('canceled','subscription_expired');continue;}
         const body=JSON.stringify(job.event);
         if(new TextEncoder().encode(body).length>262144) {await finish('failed','payload_too_large');continue;}
         try {
-          const response=await requestCallback(transport,sub.url,{headers:await headersFor(sub,job.eventId,body,nowMs()),body});
+          const response=await requestCallback(transport,sub.url,{headers:await headersFor(sub,job.eventId,body,nowMs()),body,signal:controller.signal});
           if(response.status>=200&&response.status<300)await finish('delivered');
-          else if(response.status===410) {await safeStorage(()=>store.revoke(sub.ownerId,sub.id,iso(nowMs()),'receiver_gone'));result.canceled++;}
+          else if(response.status===410) {await drainStorage(()=>store.revoke(sub.ownerId,sub.id,iso(nowMs()),'receiver_gone'));result.canceled++;}
           else if(response.status===413)await finish('failed','payload_too_large');
           else if([408,425,429].includes(response.status)||response.status>=500)await retry(response.status>=500?'http_5xx':'http_4xx');
           else await finish('failed','http_4xx');
         } catch(error) {
+          if(error.code==='drain_budget_exhausted')throw error;
           if(['unsafe_callback_destination','callback_redirect_rejected'].includes(error.code))await finish('failed',error.code);
           else if(error.code==='event_storage_unavailable')throw error;
           else await retry(error.data?.reason??'connection_refused');
         }
       }
       return result;
+      };
+      if(budgetMs===null)return run();
+      // HTTP waitUntil has a shared 30-second ceiling. Finish by 25 seconds,
+      // abort outstanding fetches and leave untouched work/expired claims durable.
+      const deadline=new Promise(resolve=>{timer=setTimeout(()=>{controller.abort();resolve({...result,budgetExhausted:true});},budgetMs);});
+      try{return await Promise.race([run(),deadline]);}finally{clearTimeout(timer);}
     }
   };
 }

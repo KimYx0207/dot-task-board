@@ -4,6 +4,9 @@
 
 ## 0.3.0-rc.1 — 2026-10-11 (source preview)
 
+- Add owner-authenticated Sites Events discovery independently of the delivery switch, with explicit transport/subscription/outbox readiness.
+- Add atomic request and candidate-approval events, new-event-first immediate delivery limited to two items and 25 seconds, and durable pending/failure records. No background retry trigger is installed.
+- Constrain direct callbacks to verified exact origins and an independently established complete public-egress contract. Keep delivery disabled by default and preserve owner-scoped unsubscribe after a project is stopped or removed.
 - Simplify the project homepage: progress and decisions first, one primary request entry, with filters, raw records, candidate source details and technical diagnostics collapsed on demand. Preserve task controls and project-level Agent grouping. Show exact duplicate progress text once, remove the repeated goal/criteria block from task details, and keep full candidate reasons in the detail panel.
 - Add durable candidate suggestions with source references, rationale, expected outcome, deadline, project and decision notes.
 - Approve a candidate into exactly one ordinary received request, with atomic persistence, version checks and idempotent replay. Approval does not enqueue or execute work.

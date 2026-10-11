@@ -74,7 +74,7 @@ An ordinary Worker deployment requires its own configuration for bindings, routi
 
 ## Runtime configuration
 
-This table describes the generic adapter, not a second configuration checklist for Sites. All booleans below require the exact string `true`; absent optional flags remain off. The current private Sites entry forcibly disables direct Events delivery regardless of its flag; see [the current integration scope](integrations.md).
+This table describes the generic adapter, not a second configuration checklist for Sites. All booleans below require the exact string `true`; absent optional flags remain off. Sites separates owner-authenticated Events discovery from delivery: direct subscription/delivery additionally needs its enabled flag, storage and a separately verified deployment policy. See the [Sites direct Events contract](sites-direct-events.md) and [current integration scope](integrations.md).
 
 | Variable | Purpose |
 | --- | --- |
@@ -101,7 +101,7 @@ Browser submission requires same-origin JSON requests. This protects the intende
 
 ## Refresh, events and validation
 
-Refresh rereads supplied records without updating their observation times. An exporter or polling service must be configured separately. For the generic host experiment, Events additionally require an authorized transport contract and a separately configured scheduled drain; see [the two transport contracts](integrations.md). Candidate transport source is included, but no production callback connection or native execution scheduler is supplied or verified. The standard private Sites entry keeps direct Events and scheduled draining disabled.
+Refresh rereads supplied records without updating their observation times. An exporter or polling service must be configured separately. For the generic host experiment, Events additionally require an authorized transport contract; any scheduled drain needs separate configuration. See [the two transport contracts](integrations.md). The Sites direct path exposes discovery independently, gates subscriptions/delivery on verified private policy, and can make a bounded immediate attempt after a committed save or candidate approval. It installs no scheduler, polling or autonomous retry; Sites scheduled draining remains disabled. Transport source does not supply or verify a production callback connection, native chat wake or execution scheduler. See [Sites direct Events](sites-direct-events.md).
 
 Verify signed-out access denial, owner isolation, save/retry/read/event flows and any selected host's behavior with synthetic data before connecting private records. A 390px frame checks layout, not a real phone. Verify real devices and live integrations separately before claiming their acceptance. Provider limits and charges depend on the chosen account and configuration; no free-service or throughput guarantee is made here.
 

@@ -8,7 +8,7 @@ The snapshot board works on its own. Intake, queueing and event delivery are sep
 
 For a new private online board, follow [Sites deployment](sites-deployment.md). The deployed interface, manual status and configured request/observation services are the current product path. Queue execution, Events, relay transport and external-host setup below are optional engineering integrations, not required installation steps.
 
-Source code and synthetic tests exist for these interfaces, but cloning the repository does not connect a native execution host or start automatic work. Direct Events delivery and the scheduled drain are disabled by the current Sites entry. Its separate relay bridge requires independent private configuration and verification; leave it out of a standard installation.
+Source code and synthetic tests exist for these interfaces, but cloning the repository does not connect a native execution host or start automatic work. Sites now separates owner-authenticated Events discovery from policy-gated direct delivery. Standard installation keeps delivery off; the direct path requires independently verified runtime/routing/exact-origin evidence and a real native subscription. Sites scheduled draining remains disabled. Its separate relay bridge still requires independent private configuration and verification; leave it out of a standard installation. See [Sites direct Events](sites-direct-events.md).
 
 ## Scheduled dot continuation
 
@@ -86,9 +86,9 @@ The repository includes a `cloud_threads` capability adapter, but no connected n
 
 ## Events and webhooks: experimental
 
-This section describes the generic Worker and separate candidate-host experiment, not the standard private Site. The Sites adapter forces direct Events off and disables its scheduled drain; its optional relay bridge is a different, separately configured path.
+The generic Worker, candidate host and owner-private Sites have different readiness gates. Sites advertises the direct Events directory whenever intake MCP is enabled and the relay is off, including when direct delivery is off. Subscription and delivery require available storage, `DOT_BOARD_EVENTS_ENABLED=true` and the separately verified [Sites deployment policy](sites-direct-events.md). Its optional relay remains a distinct path; both delivery flags together fail closed. Sites scheduled draining stays disabled.
 
-`DOT_BOARD_EVENTS_ENABLED=true` enables experimental Events methods when their storage exists. It is off by default. The implementation advertises experimental protocol value `2026-07-28`; compatibility with any particular client is not established by that identifier.
+For the generic Worker, `DOT_BOARD_EVENTS_ENABLED=true` enables experimental Events methods when their storage exists; the flag is off by default. Sites directory discovery is independent of that flag, while direct subscriptions and transport require it plus the verified policy. The implementation advertises experimental protocol value `2026-07-28`; compatibility with any particular client is not established by that identifier.
 
 The event `project_request.created` contains request/project identifiers and a version, not the request body. It is a notification to read the request through an authenticated tool, not an execution command.
 
@@ -96,7 +96,7 @@ The implementation includes `events/list`, `events/subscribe` and `events/unsubs
 
 Both contracts validate callback URLs and reject redirects. The explicit-pinned path rechecks DNS results and currently accepts only public IPv4 addresses; private/reserved addresses and IPv6 fail closed. The platform-managed path relies on the actual verified platform public-egress boundary rather than manufacturing DNS results or accepting caller-selected origin overrides. The receiver must verify signatures, reject stale messages and deduplicate deliveries. Delivery can be retried; treat it as at-least-once, not exactly-once.
 
-The Worker provides an outbox drain in its `scheduled` handler, but a platform schedule must be configured separately. This repository does not claim verified Cloudflare callback delivery, plugin connection, native automatic scheduling or real-phone end-to-end acceptance. Local fixtures and mock transports establish only the behaviors they test.
+The generic Worker provides an outbox drain in its `scheduled` handler, but a platform schedule must be configured separately. Sites explicitly disables that handler. Its direct path atomically stores events/outbox entries with ordinary requests or approved candidates and uses `ctx.waitUntil` for at most two immediate delivery attempts, within 25 seconds and 10 seconds per callback. Durable transient retries and expired-lease recovery need a subsequent authorized drain; no scheduler, polling or autonomous retry is installed. A `2xx` proves callback receipt only. Real native subscription, exact-origin ownership, runtime/zone proof, challenge, persistence, event arrival/chat wake and permitted result receipts require separate acceptance. Local fixtures and mocks establish only the behaviors tested; see the [full Sites contract](sites-direct-events.md).
 
 ## Durable dispatch guards (experimental)
 

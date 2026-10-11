@@ -9,6 +9,13 @@ export function createD1McpEventsStore(db) {
     async available() {
       try {for(const name of ['mcp_event_subscriptions','mcp_events','mcp_event_outbox'])await db.prepare(`SELECT * FROM ${name} LIMIT 0`).all();return true;} catch {return false;}
     },
+    async deliverySummary(ownerId,now) {
+      const [subscriptions,outbox]=await db.batch([
+        db.prepare('SELECT COUNT(*) AS n FROM mcp_event_subscriptions WHERE owner_id=? AND active=1 AND expires_at>?').bind(ownerId,now),
+        db.prepare('SELECT o.state,COUNT(*) AS n FROM mcp_event_outbox o JOIN mcp_events e ON e.event_id=o.event_id WHERE e.owner_id=? GROUP BY o.state').bind(ownerId)
+      ]);
+      return {activeSubscriptions:Number(subscriptions.results[0].n),outbox:Object.fromEntries(outbox.results.map(row=>[row.state,Number(row.n)]))};
+    },
     async getSubscription(id,ownerId) {
       return subscription(await db.prepare('SELECT * FROM mcp_event_subscriptions WHERE id=? AND owner_id=?').bind(id,ownerId).first());
     },
@@ -75,8 +82,8 @@ export function createD1McpEventsStore(db) {
         db.prepare("UPDATE mcp_event_outbox SET state='failed',last_reason='attempts_exhausted',lease_token=NULL,lease_until=NULL WHERE attempts>=? AND (state IN ('pending','retry') OR (state='delivering' AND lease_until<=?))").bind(maxAttempts,now)
       ]);
     },
-    async due(now,limit,maxAttempts) {
-      const result=await db.prepare("SELECT subscription_id,event_id FROM mcp_event_outbox WHERE attempts<? AND ((state IN ('pending','retry') AND next_attempt_at<=?) OR (state='delivering' AND lease_until<=?)) ORDER BY next_attempt_at,event_id,subscription_id LIMIT ?").bind(maxAttempts,now,now,limit).all();
+    async due(now,limit,maxAttempts,preferredEventId=null) {
+      const result=await db.prepare("SELECT subscription_id,event_id FROM mcp_event_outbox WHERE attempts<? AND ((state IN ('pending','retry') AND next_attempt_at<=?) OR (state='delivering' AND lease_until<=?)) ORDER BY CASE WHEN event_id=? THEN 0 ELSE 1 END,next_attempt_at,event_id,subscription_id LIMIT ?").bind(maxAttempts,now,now,preferredEventId,limit).all();
       return result.results.map(row=>({subscriptionId:row.subscription_id,eventId:row.event_id}));
     },
     async claim(q) {
