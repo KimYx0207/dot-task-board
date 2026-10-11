@@ -111,7 +111,7 @@ Sites 使用未经改写的 `drizzle/` 日志、全部 10 条 SQL 与全部 10 �
 node -e "const s=require('./examples/synthetic-snapshot.json'); console.log(JSON.stringify([...new Set(s.tasks.map(t=>t.project))].map((name,i)=>({id:'demo-'+i,name,aliases:[]}))))"
 ```
 
-当前私有 Sites 入口禁用直接 Events 投递和定时处理，修改环境开关不能开启。标准安装不配置 Events/中继；可单独配置的中继桥接属于宿主接入实验，不是使用看板必须补做的步骤，也不是已验收的自动执行连接。不要公开中继地址、秘密值或真实观察记录。其他接入边界见[所有者观察通道](OWNER_OBSERVATION_UPDATES.md)和[原生宿主契约](NATIVE_HOST_ADAPTER.md)。
+私有 Sites 入口在需求 MCP 开启且中继关闭时提供所有者认证的 Events 目录，即使直接投递仍关闭。订阅和投递还要求 `DOT_BOARD_EVENTS_ENABLED=true`、事件存储可用，以及独立核实的私有运行时、路由与精确回调 origin 策略；目录或开关本身不代表就绪。标准安装保持直接 Events 和独立中继关闭。有限即时投递不安装调度器或自主重试，Sites 定时处理仍明确禁用。策略与真实验收要求见 [Sites 直接 Events 契约](sites-direct-events.md)。可选中继保留为独立接入路径；两个投递开关同时开启会拒绝服务。不要公开回调/中继地址、秘密值、运行策略或真实观察记录。执行边界见[所有者观察通道](OWNER_OBSERVATION_UPDATES.md)和[原生宿主契约](NATIVE_HOST_ADAPTER.md)。
 
 ## 5. 验收新在线站点
 

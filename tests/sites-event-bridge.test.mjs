@@ -122,9 +122,10 @@ test('task cancellation dominates observed status before leaving source; owner a
  assert.equal(c.siteDB.db.prepare('SELECT COUNT(*) n FROM dispatch_jobs').get().n,0);
 });
 
-test('disabled configuration never advertises events or creates an outbox row or HTTP request',async t=>{
+test('disabled observation bridge exposes only the direct request catalog, with no outbox row or HTTP request',async t=>{
  const c=setup(t);c.env.DOT_BOARD_EVENT_BRIDGE_ENABLED='false';
- assert(!(await c.rpc('server/discover')).body.result.capabilities.events);
+ assert((await c.rpc('server/discover')).body.result.capabilities.events);
+ const catalog=(await c.rpc('events/list')).body.result.events;assert.deepEqual(catalog.map(event=>event.name),['project_request.created']);
  await c.record();assert.equal(c.siteDB.db.prepare('SELECT COUNT(*) n FROM board_observation_outbox').get().n,0);
  assert.equal(c.requests.length,0);assert.equal(c.received().length,0);
 });

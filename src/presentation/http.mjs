@@ -29,7 +29,7 @@ export async function handleRequest(request,{readSnapshot,getAsset,config,intake
     const result = await readBoard(readSnapshot,config);
     response = new Response(JSON.stringify(result.body),{status:result.status,headers:{...headers,'content-type':'application/json; charset=utf-8'}});
   } else if (url.pathname === '/api/config') {
-    response = new Response(JSON.stringify({...config,candidatesEnabled:Boolean(intake?.capabilities?.candidates?.canPropose),candidateCapabilities:intake?.capabilities?.candidates??null,manualStatusEnabled:Boolean(intake?.manualStatus),requirementsEnabled:Boolean(intake?.requirements&&await intake.requirements.available())}),{headers:{...headers,'content-type':'application/json; charset=utf-8'}});
+    response = new Response(JSON.stringify({...config,...(intake?.capabilities?.eventDelivery?{eventDelivery:intake.capabilities.eventDelivery}:{}),candidatesEnabled:Boolean(intake?.capabilities?.candidates?.canPropose),candidateCapabilities:intake?.capabilities?.candidates??null,manualStatusEnabled:Boolean(intake?.manualStatus),requirementsEnabled:Boolean(intake?.requirements&&await intake.requirements.available())}),{headers:{...headers,'content-type':'application/json; charset=utf-8'}});
   } else if (url.pathname === '/health') {
     response = new Response(JSON.stringify({status:'ok',mode:intake?.capabilities?.enabled?'snapshot-and-project-intake':intake?.capabilities?.canSubmit?'project-intake-verifying':'read-only'}),{headers:{...headers,'content-type':'application/json'}});
   } else if (url.pathname === '/preview/mobile') {

@@ -17,7 +17,7 @@
 - `POST /api/candidates/:id/review`: `eventId`, `expectedVersion`, `decision` (`approve` or `reject`) and `note`.
 - MCP: `list_candidates`, `get_candidate`, `propose_candidate`, `review_candidate`.
 
-The ordinary-data migration appends candidate and decision records without altering existing execution tables. Approval records the candidate decision, request and initial request receipt atomically. A conflict requires a fresh read. An ambiguous response is reconciled from the saved receipt; it does not authorize a second request or native send. Candidate approval does not write dispatch jobs, event delivery, permissions or task bindings.
+The ordinary-data migration appends candidate and decision records without altering existing execution tables. Approval records the candidate decision, request and initial request receipt atomically. With Sites direct Events enabled and storage available, the same transaction also records the identifier-only `project_request.created` event and matching outbox entries; any failure rolls back the full approval. The default generic/no-direct candidate path keeps its ordinary no-Events behavior. A conflict requires a fresh read. An ambiguous response is reconciled from the saved receipt; it does not authorize a second request or native send. Approval does not write dispatch jobs, execution authorization, permissions or task bindings and never executes the request.
 
 ## Check before reserving execution
 
@@ -34,7 +34,7 @@ The current public package does not implement `get_request_withdrawal_state`. Th
 
 The [official MCP Events specification](https://developers.openai.com/plugins/build/mcp-events) uses authenticated discovery and subscriptions, HTTPS callback verification and signed webhook delivery. Delivery acknowledgement is separate from execution. Polling or a page refresh is not the same transport.
 
-This repository has a generic webhook implementation. The standard Sites entry still disables direct delivery until a supported callback transport and trusted host integration are established. Candidate storage works independently. A deployment must verify its own subscription, wake, original-session dispatch and result receipt before advertising that complete path.
+The Sites entry now exposes owner-authenticated Events discovery separately from direct transport readiness. Candidate storage works independently; direct subscription/delivery needs the enabled flag, durable storage and a separately verified runtime/routing/exact-origin policy. An enabled Sites approval can schedule at most two immediate callbacks through `ctx.waitUntil`, with a 25-second budget and 10 seconds per callback. No scheduler, autonomous retry, polling or execution is added. The directory and a `2xx` receipt do not prove a native chat wake. Verify the actual user-approved subscription, exact-origin ownership, runtime/zone evidence, challenge, persistence, arrival/chat wake and permitted result receipts before claiming the live path; original-session dispatch still requires its own authorization and evidence. See [Sites direct Events](sites-direct-events.md).
 
 ## Public inspiration and implementation
 
