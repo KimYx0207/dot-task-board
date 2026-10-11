@@ -4,6 +4,8 @@
 
 ## 0.3.0-rc.1 — 2026-10-11 (source preview)
 
+- Add an optional deployment-level request-notification allowlist for deferred projects. Exact project IDs can permit `project_request.created` notifications without enabling execution; default/invalid configuration grants no deferred exception. Recheck subscription and delivery, keep owner unsubscribe available, and share scope decisions across diagnostics and readiness.
+
 - Add a read-only owner-only `eventScope` diagnostic to existing visible projects in `list_request_projects`. The allowlisted boolean/reason uses the same project-scope decision as Events authorization, preserves legacy list shapes and all existing gates, and does not claim delivery readiness. Empty/invalid hidden configuration remains unchanged and separately diagnosable; hidden or absent projects are not added.
 - Accept and strip standard MCP request `_meta` at the Events boundary, retaining strict business fields, owner checks and disabled transport gates. Rejection diagnostics use only allowlisted categories and a validated callback origin; no callback path, secret or raw exception is logged. This is a compatibility fix, not live native-delivery acceptance.
 - Add owner-authenticated Sites Events discovery independently of the delivery switch, with explicit transport/subscription/outbox readiness.
