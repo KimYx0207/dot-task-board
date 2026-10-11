@@ -155,11 +155,11 @@ test('MCP candidate approval triggers one atomic direct event; rejection never t
 });
 
 
-test('newly committed request is attempted before older backlog within the two-delivery limit',async t=>{
+test('two-delivery limit attempts older backlog first and reserves a slot for the newly committed request',async t=>{
  const c=setup(t);await c.rpc('events/subscribe',params());const store=createD1McpEventsStore(c.env.DB);
  for(const id of ['synthetic-backlog-one','synthetic-backlog-two','synthetic-backlog-three'])await store.enqueue(event(id));
  const saved=await c.submit('synthetic-fresh-submission');await Promise.all(c.background.splice(0));
- const deliveries=c.deliveries().map(row=>JSON.parse(row.body));assert.equal(deliveries.length,2);assert.equal(deliveries[0].data.requestId,saved.request.id);assert.equal(c.rows('mcp_event_outbox').filter(row=>row.state==='pending').length,2);
+ const deliveries=c.deliveries().map(row=>JSON.parse(row.body));assert.equal(deliveries.length,2);assert.equal(deliveries[0].data.requestId,'synthetic-backlog-one');assert.equal(deliveries[1].data.requestId,saved.request.id);assert.equal(c.rows('mcp_event_outbox').filter(row=>row.state==='pending').length,2);
 });
 
 test('policy withdrawn during a signed challenge prevents activation; callback failures stay sanitized',async t=>{
