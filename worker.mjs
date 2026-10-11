@@ -1,3 +1,6 @@
+import {candidateCapabilities} from './src/domain/candidates.mjs';
+import {createD1CandidateStore} from './src/adapters/d1-candidates.mjs';
+import {createCandidateService} from './src/application/candidate-service.mjs';
 import {applyTaskStatusOverlay} from './src/domain/task-status-overlay.mjs';
 import {readEnvironmentProjectRegistry,withIndependentProjectRegistry,gateIntakeByProjectRegistry} from './src/adapters/project-registry.mjs';
 import {handleRequest} from './src/presentation/http.mjs';
@@ -21,7 +24,7 @@ export function createWorker(assets,config=boardConfig,runtime={}) {
   }
   return {async fetch(request,env={},ctx={}) {
     const path=new URL(request.url).pathname;
-    const needsStorage=path==='/health'||path==='/mcp'||path==='/api/board'||path.startsWith('/api/dispatch/')||path.startsWith('/api/tasks/')||path.startsWith('/api/intake/')||path.startsWith('/api/projects/')||path.startsWith('/api/requests/');
+    const needsStorage=path==='/api/config'||path==='/api/candidates'||path.startsWith('/api/candidates/')||path==='/health'||path==='/mcp'||path==='/api/board'||path.startsWith('/api/dispatch/')||path.startsWith('/api/tasks/')||path.startsWith('/api/intake/')||path.startsWith('/api/projects/')||path.startsWith('/api/requests/');
     const registry=readEnvironmentProjectRegistry(env);
     const event=needsStorage?await eventRuntime(env,registry):{eventStore:null,events:null,requested:false,available:false};
     const queueStore=createD1DispatchQueue(env.DB),queueRequested=env.DOT_BOARD_QUEUE_ENABLED==='true',queueAvailable=queueRequested&&Boolean(queueStore)&&needsStorage&&await queueStore.available();
@@ -36,8 +39,12 @@ export function createWorker(assets,config=boardConfig,runtime={}) {
       return snapshot;
     };
     const service=createIntakeService({store,readBoard:()=>readBoard(readSnapshot,config),capabilities,clock:runtime.clock,newId:runtime.newId});
+    const candidateStore=createD1CandidateStore(env.DB),candidateStorageAvailable=storageAvailable&&Boolean(candidateStore)&&await candidateStore.available();
+    const candidateCaps=candidateCapabilities(capabilities,candidateStorageAvailable);
+    const candidates=candidateStorageAvailable?createCandidateService({store:candidateStore,requests:service,readBoard:()=>readBoard(readSnapshot,config),capabilities:candidateCaps,clock:runtime.clock,newId:runtime.newId}):null;
+    capabilities={...capabilities,candidates:candidateCaps};
     const dispatch=queueAvailable?createDispatchService({store:queueStore,requests:service,enabled:true,readRegistry:async()=>{const current=readEnvironmentProjectRegistry(env);return current.status==='configured'?current.records:null;},capacity:env.DOT_BOARD_QUEUE_CAPACITY??1,clock:runtime.clock}):null;
-    const response=await handleRequest(request,{readSnapshot,getAsset:path=>assets[path],config,intake:{service,capabilities,manualStatus:runtime.manualStatusFor?runtime.manualStatusFor(env):null,requirements:runtime.requirementsFor?runtime.requirementsFor(env):null,mcpEnabled:env.DOT_BOARD_INTAKE_MCP_ENABLED==='true',events:event.events,eventsEnabled:event.available,dispatch,manualCheck:runtime.manualCheckFor?runtime.manualCheckFor(env,{requests:service,dispatch,clock:runtime.clock}):null,observations:runtime.observationsFor?await runtime.observationsFor(env,ownerId):null,taskControls:runtime.taskControlsFor?runtime.taskControlsFor(env,ownerId):null}});
+    const response=await handleRequest(request,{readSnapshot,getAsset:path=>assets[path],config,intake:{service,capabilities,candidates,manualStatus:runtime.manualStatusFor?runtime.manualStatusFor(env):null,requirements:runtime.requirementsFor?runtime.requirementsFor(env):null,mcpEnabled:env.DOT_BOARD_INTAKE_MCP_ENABLED==='true',events:event.events,eventsEnabled:event.available,dispatch,manualCheck:runtime.manualCheckFor?runtime.manualCheckFor(env,{requests:service,dispatch,clock:runtime.clock}):null,observations:runtime.observationsFor?await runtime.observationsFor(env,ownerId):null,taskControls:runtime.taskControlsFor?runtime.taskControlsFor(env,ownerId):null}});
     if(event.events&&response.status===201&&request.method==='POST'&&path.startsWith('/api/projects/')&&typeof ctx.waitUntil==='function')ctx.waitUntil(event.events.drain({limit:10}));
     return response;
   },async scheduled(_controller,env={}){

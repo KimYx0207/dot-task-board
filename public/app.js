@@ -1,3 +1,5 @@
+import {createCandidateController, renderCandidateWorkspace, candidateReadsAvailable} from './candidate-workspace.js';
+import {renderTaskWorkspace, renderResultsWorkspace, renderCapabilityState} from './workspace-views.js';
 import {renderProjectClarity, renderRequestInbox, taskClarity, clarityBoard, renderTaskHistory, createManualStatusController, renderManualStatusForm, createTaskRequirementsController, renderTaskRequirementsForm, MANUAL_STATES, presentationScope, projectPresentationKind, presentationBoard} from './project-clarity.js';
 import {createQueueControls} from './queue-controls.js';
 import {aggregateProjects, renderProjectOverview, ageExecutionBoard, executionExpirySignature, mappedQueueTaskContext, originalQueueTaskContext, withoutManagedQueueTasks} from './project-overview.js';
@@ -45,8 +47,9 @@ function matchesAgentFilter(agent, filter=ui.filter){const state=activity(agent)
 function visibleItems(){return ui.view==='agents' ? agents().filter(agent=>agentMatches(agent)&&matchesAgentFilter(agent)) : tasks().filter(task=>taskMatches(task)&&(ui.filter==='all'||taskClarity(task,currentBoard(),queueSnapshot).displayState===ui.filter));}
 function preserveFocus(render){const active=document.activeElement,key=active?.dataset?.focusKey;render();if(key){for(const node of document.querySelectorAll('[data-focus-key]'))if(node.dataset.focusKey===key){node.focus({preventScroll:true});break;}}}
 function setView(view, filter='all'){ui.view='projects';ui.filter=filter;ui.selected=null;ui.fromAgent=null;render();}
-function setProject(project){ui.project=project;ui.selected=null;ui.fromAgent=null;ui.detailOpen=false;syncIntakeProjectByName(project);render();window.scrollTo({top:0,behavior:'auto'});$('project-page-title').focus({preventScroll:true});}
+function setProject(project){if(!['tasks','results'].includes(workspaceSection))workspaceSection='projects';ui.project=project;ui.selected=null;ui.fromAgent=null;ui.detailOpen=false;syncIntakeProjectByName(project);render();window.scrollTo({top:0,behavior:'auto'});$('project-page-title').focus({preventScroll:true});}
 function selectItem(type,id,fromAgent=null){
+  if(!['projects','tasks'].includes(workspaceSection)){workspaceSection='tasks';renderWorkspaceSurface();}
   ui.detailFocusKey=document.activeElement?.dataset?.focusKey || document.activeElement?.dataset?.queueFocus || ui.detailFocusKey;
   const reset=ui.view!=='projects'&&type==='agent'&&!visibleItems().some(item=>item.id===id);
   if(reset){ui.view='projects';ui.project='';ui.filter='all';ui.query='';$('search').value='';}
@@ -151,12 +154,12 @@ function renderCollaboration(){
  renderProjectClarity(container,extra,queueSnapshot,{project:ui.project,query:ui.query,taskState:ui.filter,contentType:ui.contentType,recordScope:ui.recordScope,statusController:manualStatuses,staleAfterMinutes:config?.staleAfterMinutes||120,onClear:clearFilters,onProject:setProject,onTask:id=>selectItem('task',id),onAgent:id=>selectItem('agent',id)});
 }
 
-function render(){if(!board)return;$('clear-search').hidden=!ui.query;preserveFocus(()=>{renderProjects();renderSummary();renderFilters();renderRows();renderInspector();renderCollaboration();renderIntake();renderInbox();dispatchQueue.refreshView?.();});}
+function render(){if(!board)return;$('clear-search').hidden=!ui.query;preserveFocus(()=>{renderProjects();renderSummary();renderFilters();renderRows();renderInspector();renderCollaboration();renderIntake();renderInbox();dispatchQueue.refreshView?.();renderWorkspaceSurface();});}
 function renderSource(){const imported=formatted(board.importedAt);$('source-scope').textContent=board.statusUpdates?.taskCount?`${board.statusUpdates.taskCount} / ${tasks().length} 项局部更新`:'已导入部分记录';$('snapshot-mode').textContent=board.source?.mode==='synthetic'?'演示数据 · 非实时':'状态快照 · 非实时';$('source-meta').textContent=`导入于 ${imported} · 重读不会更新观察时间`;if(board.statusUpdates?.taskCount){$('source-meta').textContent+=` · ${board.statusUpdates.taskCount} / ${tasks().length} 项任务局部更新，最近证据 ${formatted(board.statusUpdates.latestObservedAt)}；未更新任务及 Agent 记录仍沿用原时间，Agent 数量不是运行数`;};if(board.queueUpdates?.totalQueueRecords||board.queueUpdates?.truncated){$('source-meta').textContent+=` · 队列共 ${board.queueUpdates.totalQueueRecords} 条记录，当前选入 ${board.queueUpdates.taskCount} 项，最近回执 ${formatted(board.queueUpdates.latestObservedAt)}${board.queueUpdates.truncated?'（当前仅展示部分队列）':''}；回执时间不代表持续在线`;};$('source-label').textContent=text(board.source?.label,'导入记录');$('coverage').textContent=`${agents().length} 位已知 Agent · ${tasks().length} 项选定任务 · ${text(board.coverage?.scope,'仅包含已导入的部分记录')}`;$('read-at').textContent=`本次读取 ${formatted(board.generatedAt)}（仅刷新页面，不更新来源记录）`;}
 function showError(code){const message=code==='no_feed'?'尚未接入状态快照':/schema|invalid|missing/.test(code)?'快照格式暂不受支持':code==='auth'?'登录状态已失效，请重新打开私密看板登录':'暂时无法读取快照';$('notice').className='notice error';$('notice').textContent=board?`${message}。保留上次读取的内容，这些记录尚未更新。`:message;if(!board){$('rows').replaceChildren(emptyState(message,'可以稍后点击“重读快照”再试'));$('source-meta').textContent='没有可用的观察数据';}}
 async function refresh(){
   const sequence=++requestId,controller=new AbortController(),timer=setTimeout(()=>controller.abort(),12000);$('refresh').disabled=true;$('refresh').textContent='读取中…';
-  try{if(!config){const response=await fetch('/api/config',{cache:'no-store',signal:controller.signal});if(!response.ok)throw new Error([401,403].includes(response.status)?'auth':'config_unavailable');config=await response.json();}
+  try{if(!config){const response=await fetch('/api/config',{cache:'no-store',signal:controller.signal});if(!response.ok)throw new Error([401,403].includes(response.status)?'auth':'config_unavailable');config=await response.json();renderWorkspaceSurface();if(candidateReadsAvailable(config))void candidateController.refresh();}
     const response=await fetch('/api/board',{cache:'no-store',signal:controller.signal});if([401,403].includes(response.status))throw new Error('auth');const result=await response.json();if(sequence!==requestId)return;if(!response.ok)throw new Error(result.error || 'source_unavailable');if(!Array.isArray(result.tasks))throw new Error('invalid_tasks');board=result;$('notice').textContent='';$('notice').className='notice';renderSource();render();observationSignature=freshnessSignature();refreshIntakeProjectIfNeeded();void loadInbox();return true;
   }catch(error){if(sequence===requestId)showError(error.message || 'source_unavailable');return false;}
   finally{clearTimeout(timer);if(sequence===requestId){$('refresh').disabled=false;$('refresh').replaceChildren(el('span','','↻'),document.createTextNode(' 更新进展'));}}
@@ -165,7 +168,7 @@ $('search').addEventListener('input',()=>{ui.query=$('search').value.trim().toLo
 $('clear-search').addEventListener('click',()=>{ui.query='';$('search').value='';render();$('search').focus();});
 $('project').addEventListener('change',()=>setProject($('project').value));$('refresh').addEventListener('click',refresh);
 function freshnessSignature(){return [...agents().map(agent=>`${agent.id}:${freshness(activity(agent).observedAt)}`),...tasks().map(task=>`${task.id}:${freshness(task.observedAt)}`),executionExpirySignature(board)].join('|');}
-function ageVisibleEvidence(){if(document.hidden)return;dispatchQueue.age();if(!board||document.querySelector('.po-viewport.is-dragging'))return;const next=freshnessSignature();if(next!==observationSignature){observationSignature=next;preserveFocus(()=>{renderFilters();renderRows();renderInspector();renderCollaboration();});}}
+function ageVisibleEvidence(){if(document.hidden)return;dispatchQueue.age();if(!board||document.querySelector('.po-viewport.is-dragging'))return;const next=freshnessSignature();if(next!==observationSignature){observationSignature=next;preserveFocus(()=>{renderFilters();renderRows();renderInspector();renderCollaboration();renderWorkspaceSurface();});}}
 setInterval(ageVisibleEvidence,1000);
 document.addEventListener('visibilitychange',ageVisibleEvidence);
 
@@ -220,7 +223,7 @@ function acceptReceipt(projectId,receipt){
 }
 function intakeErrorMessage(code,status){if(status===401||status===403)return '登录状态不可用，请重新打开私密看板登录；草稿已保留';const messages={intake_not_ready:'需求通道尚未启用，草稿已保留',body_too_long:'内容超过 6000 字，请缩短后提交',request_too_large:'内容过长，请缩短后提交',invalid_body:'请填写有效的需求内容',invalid_task_context:'关联任务无效，请重新选择；草稿已保留',task_project_mismatch:'关联任务不属于这个项目，请重新选择',unknown_project:'项目尚未接入需求通道',project_not_found:'项目尚未接入需求通道',idempotency_conflict:'提交标识与已保存内容冲突，请先核对需求记录；草稿已保留',submission_conflict:'提交标识与已保存内容冲突，请先核对需求记录；草稿已保留',invalid_snapshot_revision:'快照版本不可用，请更新看板后重新提交',invalid_snapshot_time:'快照时间不可用，请更新看板后重新提交'};return messages[code] || (status===409?'提交发生冲突，请先更新需求记录核对；草稿已保留':'暂时无法确认保存结果，草稿已保留。可重试同一条需求核对回执');}
 async function requestJson(url,options={}){const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),12000);try{const response=await fetch(url,{...options,cache:'no-store',credentials:'same-origin',signal:controller.signal});let result;try{result=await response.json();}catch{const error=new Error('invalid_response');error.uncertain=true;throw error;}if(!response.ok){const error=new Error(result?.error || 'request_failed');error.status=response.status;throw error;}return result;}finally{clearTimeout(timer);}}
-async function loadIntakeCapabilities(){if(intake.capabilityLoading)return;intake.capabilityLoading=true;renderIntake();try{const value=await requestJson('/api/intake/capabilities');if(typeof value.enabled!=='boolean'||typeof value.canSubmit!=='boolean'||typeof value.storageAvailable!=='boolean')throw Error('invalid_response');intake.capabilities=value;intake.capabilityError='';}catch(error){intake.capabilityError=intakeErrorMessage(error.message,error.status);intake.capabilities=null;}finally{intake.capabilityLoading=false;renderIntake();const project=requestProject();if(project?.id&&intake.capabilities?.storageAvailable)void loadProjectRequests(project.id);}}
+async function loadIntakeCapabilities(){if(intake.capabilityLoading)return;intake.capabilityLoading=true;renderIntake();try{const value=await requestJson('/api/intake/capabilities');if(typeof value.enabled!=='boolean'||typeof value.canSubmit!=='boolean'||typeof value.storageAvailable!=='boolean')throw Error('invalid_response');intake.capabilities=value;intake.capabilityError='';}catch(error){intake.capabilityError=intakeErrorMessage(error.message,error.status);intake.capabilities=null;}finally{intake.capabilityLoading=false;renderIntake();renderWorkspaceCapabilities();const project=requestProject();if(project?.id&&intake.capabilities?.storageAvailable)void loadProjectRequests(project.id);}}
 function refreshIntakeProjectIfNeeded(){const project=requestProject();if(project?.id&&intake.capabilities?.storageAvailable){const history=historyFor(project.id);if(!history.loaded&&!history.loading)void loadProjectRequests(project.id);}}
 function chooseIntakeProject(key,{syncBoard=true,load=true}={}){intake.projectKey=key;intake.selectedReceipt=null;persistIntakeDrafts();const project=requestProject();if(syncBoard){ui.project=project?.name || '';ui.selected=null;ui.fromAgent=null;render();}else renderIntake();if(load&&project?.id&&intake.capabilities?.storageAvailable)void loadProjectRequests(project.id);}
 function syncIntakeProjectByName(name){if(!name){chooseIntakeProject('',{syncBoard:false});return;}const current=requestProject();if(current?.names.includes(name))return;const matches=requestChoices().filter(row=>row.names.includes(name));chooseIntakeProject(matches.length===1?matches[0].key:'',{syncBoard:false});}
@@ -270,7 +273,46 @@ $('request-project').addEventListener('change',()=>chooseIntakeProject($('reques
 $('request-context-task').addEventListener('change',()=>{const draft=currentDraft();if(draft.pending)return;draft.contextTaskId=$('request-context-task').value || null;draft.context=captureRequestContext(requestProject(),draft);persistIntakeDrafts();renderIntake();});
 $('request-body').addEventListener('input',()=>{const draft=currentDraft();if(draft.pending)return;draft.body=$('request-body').value;if(!draft.context)draft.context=captureRequestContext(requestProject(),draft);intake.messages.delete(intake.projectKey);persistIntakeDrafts();renderIntake();});
 $('request-form').addEventListener('submit',submitProjectRequest);$('request-reload').addEventListener('click',()=>{void loadIntakeCapabilities();void loadInbox();const project=requestProject();if(project?.id)void loadProjectRequests(project.id);if(intake.selectedReceipt&&project?.id)void loadRequestDetail(intake.selectedReceipt,project.id);});$('request-more').addEventListener('click',()=>{const project=requestProject();if(project?.id)void loadProjectRequests(project.id,{more:true});});
-const dispatchQueue=createQueueControls($('managed-queue'),{requestJson,getTaskContext:queueTaskContext,onNewRequest:()=> $('open-request').click(),onOpenTask:id=>selectItem('task',id),onOpenAgent:id=>selectItem('agent',id),getHighlightedProject:()=>ui.project,onSnapshot:snapshot=>{queueSnapshot=snapshot;if(board)preserveFocus(()=>{renderProjects();renderFilters();renderRows();renderCollaboration();});refreshQueueContext(snapshot);}});
+// Workspace surfaces are presentation-only; all existing queue and control handlers remain in place.
+const WORKSPACE_SECTIONS=new Set(['approvals','projects','tasks','results']);
+let workspaceSection=WORKSPACE_SECTIONS.has(location.hash.slice(1))?location.hash.slice(1):'projects';
+let candidateStorage=null;try{candidateStorage=globalThis.sessionStorage;}catch{}
+const candidateController=createCandidateController({requestJson,storage:candidateStorage,supported:()=>candidateReadsAvailable(config),capabilities:()=>config?.candidateCapabilities||intake.capabilities?.candidates||{},snapshot:()=>board||{},onChange:()=>{renderCandidates();renderWorkspaceNavigation();},onSaved:()=>{void loadInbox();const project=requestProject();if(project?.id)void loadProjectRequests(project.id);}});
+function renderCandidates(){
+  const container=$('candidate-workspace'),active=document.activeElement,key=active?.dataset?.focusKey;
+  const wasInside=active&&container.contains(active),start=active?.selectionStart,end=active?.selectionEnd;
+  renderCandidateWorkspace(container,candidateController,{enabled:candidateReadsAvailable(config),capabilities:config?.candidateCapabilities||intake.capabilities?.candidates||{},projects:requestChoices(),tasks:tasks(),onOpenRequest:openInboxRequest,onOpenTask:id=>selectItem('task',id)});
+  if(key&&wasInside){const replacement=[...container.querySelectorAll('[data-focus-key]')].find(node=>node.dataset.focusKey===key);if(replacement){replacement.focus({preventScroll:true});if(Number.isInteger(start)&&typeof replacement.setSelectionRange==='function')try{replacement.setSelectionRange(start,end);}catch{}}}
+}
+function renderWorkspaceNavigation(){
+  document.body.dataset.workspaceSection=workspaceSection;
+  for(const nav of document.querySelectorAll('[data-workspace-view]')){if(nav.dataset.workspaceView===workspaceSection)nav.setAttribute('aria-current','page');else nav.removeAttribute('aria-current');}
+  const candidates=candidateController.getState();$('candidate-nav-count').textContent=candidateReadsAvailable(config)?(candidates.loaded?String(candidates.records.filter(item=>item.status==='proposed').length)+(candidates.nextCursor?'+':''):'…'):'—';
+}
+function renderWorkspaceCapabilities(){
+  const target=$('workspace-capability-state'),open=target.querySelector('details')?.open||false;
+  renderCapabilityState(target,{config,intake:intake.capabilities});if(open)target.querySelector('details').open=true;
+}
+function renderWorkspaceSurface(){
+  renderWorkspaceNavigation();$('candidate-workspace').hidden=workspaceSection!=='approvals';$('results-workspace').hidden=workspaceSection!=='results';$('board-surface').hidden=!['projects','tasks'].includes(workspaceSection);$('task-workspace').hidden=workspaceSection!=='tasks';$('project-roster').hidden=workspaceSection==='tasks';
+  const labels={approvals:['候选审批','先核对来源和预期，再决定是否安排'],projects:[ui.project?ui.project+' · '+list(visibleBoard()?.tasks).filter(task=>task.project===ui.project).length+'项任务':'项目工作台','项目有归属，进展有依据'],tasks:['任务清单',ui.project?'当前项目：'+ui.project:'把当前进展、卡点和下一步放在一起'],results:['成果与记录',ui.project?'当前项目：'+ui.project:'从已经记录的来源，回到原始结果']};
+  $('project-page-title').textContent=labels[workspaceSection][0];$('workspace-description').textContent=labels[workspaceSection][1];
+  if(workspaceSection==='approvals')renderCandidates();
+  if(workspaceSection==='tasks')renderTaskWorkspace($('task-workspace'),visibleBoard(),queueSnapshot,{project:ui.project,query:ui.query,taskState:ui.filter,onTask:id=>selectItem('task',id)});
+  if(workspaceSection==='results')renderResultsWorkspace($('results-workspace'),visibleBoard(),{project:ui.project,onTask:id=>selectItem('task',id),onAgent:id=>selectItem('agent',id)});
+  renderWorkspaceCapabilities();
+}
+function selectWorkspace(section,{updateHistory=true,focus=true}={}){
+  if(!WORKSPACE_SECTIONS.has(section))return;workspaceSection=section;ui.detailOpen=false;$('inspector').hidden=true;renderWorkspaceSurface();
+  if(updateHistory)history.replaceState(null,'','#'+section);
+  if(section==='approvals'&&!candidateController.getState().loaded)void candidateController.refresh();
+  if(focus)$('project-page-title').focus({preventScroll:true});
+}
+for(const nav of document.querySelectorAll('[data-workspace-view]'))nav.addEventListener('click',()=>selectWorkspace(nav.dataset.workspaceView));
+window.addEventListener('hashchange',()=>selectWorkspace(location.hash.slice(1),{updateHistory:false}));
+$('refresh').addEventListener('click',()=>{if(candidateReadsAvailable(config))void candidateController.refresh();});
+renderWorkspaceSurface();
+const dispatchQueue=createQueueControls($('managed-queue'),{requestJson,getTaskContext:queueTaskContext,onNewRequest:()=> $('open-request').click(),onOpenTask:id=>selectItem('task',id),onOpenAgent:id=>selectItem('agent',id),getHighlightedProject:()=>ui.project,onSnapshot:snapshot=>{queueSnapshot=snapshot;if(board)preserveFocus(()=>{renderProjects();renderFilters();renderRows();renderCollaboration();renderWorkspaceSurface();});refreshQueueContext(snapshot);}});
 $('refresh').addEventListener('click',()=>void dispatchQueue.refresh());
 void dispatchQueue.refresh();
 setInterval(()=>{if(!document.hidden&&!dispatchQueue.getState().pending){void dispatchQueue.refresh();if(!$('refresh').disabled)void refresh();}},30000);

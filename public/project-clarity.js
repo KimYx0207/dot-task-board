@@ -279,12 +279,16 @@ export function renderRequestInbox(container, value, {onOpen, onRetry, onMore, l
   if (error) { const message = el('p', 'inbox-error', value ? '暂时无法更新，下面保留上次读取的需求。' : '暂时无法读取需求，请稍后重试。'); message.setAttribute('role', 'status'); content.push(message); }
   if (!value) { if (!error) content.push(el('p', '', '正在读取已保存的需求…')); container.replaceChildren(...content); return; }
   const requests = list(value.requests), pending = requests.filter(item => !['completed', 'canceled', 'declined'].includes(item.status));
-  const count = el('p', 'inbox-count', `${Number.isSafeInteger(value.unreadCount) ? value.unreadCount : '待核实'} 条待读取 · ${Number.isSafeInteger(value.pendingCount) ? value.pendingCount : '待核实'} 条待处理`); content.push(count);
-  content.push(el('p', 'inbox-note', '仅统计已收到、已读待处理、已受理和待确认需求；不含已分派、处理中、受阻记录。收件箱为空不代表项目全部完成。'));
-  content.push(el('p', 'inbox-note', '既有任务的目标、完成标准与下一步仍在各项目中；无需在这里重复提交。'));
+  const count = el('p', 'inbox-count', `${Number.isSafeInteger(value.unreadCount) ? value.unreadCount : '待核实'} 条待读取 · ${Number.isSafeInteger(value.pendingCount) ? value.pendingCount : '待核实'} 条待处理`); title.append(count);
+  const explanation = el('details', 'inbox-explanation'); explanation.open = state.has('inbox:explanation');
+  explanation.addEventListener('toggle', () => explanation.open ? state.add('inbox:explanation') : state.delete('inbox:explanation'));
+  const explanationSummary = el('summary', '', pending.length ? '只显示新增待处理需求 · 查看统计范围' : '暂无新增待处理需求 · 查看统计范围'); explanationSummary.dataset.focusKey = 'inbox:explanation'; explanation.append(explanationSummary);
+  explanation.append(el('p', 'inbox-note', '仅统计已收到、已读待处理、已受理和待确认需求；不含已分派、处理中、受阻记录。收件箱为空不代表项目全部完成。'));
+  explanation.append(el('p', 'inbox-note', '既有任务的目标、完成标准与下一步仍在各项目中；无需在这里重复提交。'));
+  if (!pending.length) explanation.append(el('p', 'inbox-empty', '当前收件范围无待处理需求；其他任务请看项目和执行队列。'));
+  content.push(explanation);
   const row = receipt => { const item = el('div', 'inbox-row'); item.dataset.receiptId = receipt.id; const open = button(safe(receipt.body, '查看需求'), () => onOpen?.(receipt), 'inbox:request:' + receipt.id, 'inbox-open'); const copy = el('div', 'inbox-row-copy'); copy.append(open, el('span', 'inbox-meta', `${safe(receipt.projectName, '所属项目待核实')} · ${requestStates[receipt.status] || '状态待核实'} · ${utcTime(receipt.createdAt)}`)); item.append(copy); return item; };
   for (const receipt of pending.slice(0, 3)) content.push(row(receipt));
-  if (!pending.length) content.push(el('p', 'inbox-empty', '当前收件范围无待处理需求；其他任务请看项目和执行队列。'));
   if (pending.length > 3) { const more = el('details', 'inbox-more'); more.open = state.has('inbox:more'); more.addEventListener('toggle', () => more.open ? state.add('inbox:more') : state.delete('inbox:more')); const summary = el('summary', '', `另外 ${pending.length - 3} 条待处理需求`); summary.dataset.focusKey = 'inbox:more'; more.append(summary); for (const receipt of pending.slice(3)) more.append(row(receipt)); content.push(more); }
   if (value.nextCursor && onMore) { const more = button(loading ? '读取中…' : '加载更早的待处理需求', () => onMore(), 'inbox:more-page'); more.disabled = loading; content.push(more); }
   if (value.truncated) content.push(el('p', 'inbox-note', `已显示 ${requests.length} 条，待处理总数以顶部统计为准。`));

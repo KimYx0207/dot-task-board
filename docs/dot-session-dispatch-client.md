@@ -70,3 +70,16 @@ that complete production chain works. Do not manufacture a request for that clai
 仅处理已有请求、有效准入和原线程；授权来源、原线程无在途写入及业务验收必须由
 真实宿主核实。缺少工具或核验能力会停止，不提供虚构的成功默认值。
 重复领取不重发，UNKNOWN 不释放；模拟协议测试不代表真实生产全链验收。
+
+## Inspect before dispatch
+
+Use `inspectDotSessionCapabilities` from `src/adapters/dot-session-tools.mjs` to
+list missing tools/review functions without invoking them. In a connected host,
+`client.inspectContinuation({requestId})` reads the selected existing request and
+original session, applies the required host review, and reports either an exact
+stop reason or `continuation_evidence_reviewed`. It reports `executionAuthorized: false` and `admissionChecked: false`: current control, TTL and capacity checks remain with claim/preflight. It never calls claim, update or send. A later
+dispatch rechecks everything; the inspection is not an authorization token.
+
+The public server currently does not expose `get_request_withdrawal_state`.
+That extra authenticated capability must come from the selected host. Do not
+replace it with a default false value or reuse a different request's receipt.

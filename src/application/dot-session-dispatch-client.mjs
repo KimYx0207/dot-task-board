@@ -71,6 +71,22 @@ export function createDotSessionDispatchClient({nativeTools,reviewContinuation,r
   return {outcome:'uncertain',job:saved,sent:null};
  }
  return Object.freeze({
+  // Inspect the actual selected request and original session before reserving
+  // capacity. This is useful to show a precise next step without fake requests,
+  // preliminary thread creation, changing admission, or calling claim/send.
+  async inspectContinuation({requestId}={}){
+   if(!text(requestId))return {...stop('request_required'),readOnly:true};
+   let selected;
+   try{
+    const queue=await jobs(),queued=queue.filter(j=>j.state==='queued'&&!j.holdsSlot);
+    if(queued.length!==1||queued[0].requestId!==requestId)return {...stop('single_selected_queued_request_required'),readOnly:true};
+    selected=queued[0];
+    if(!Number.isSafeInteger(selected.version)||selected.version<1||!Number.isSafeInteger(selected.requestVersion)||selected.requestVersion<1)throw error('request_version_unverified');
+    const request=await context(selected,{admission:true}),raw=await read(selected);
+    const proof=await review(selected,request,raw);
+    return {outcome:'continuation_evidence_reviewed',readOnly:true,executionAuthorized:false,admissionChecked:false,requestId:selected.requestId,jobId:selected.id,requestVersion:request.version,jobVersion:selected.version,threadId:selected.threadId,priorTurnId:raw.latestTurn.id,sourceReference:proof.reference,executionStarted:false,reservationCreated:false};
+   }catch(e){return {...stop(e.code??'host_operation_failed',selected??null),readOnly:true};}
+  },
   async dispatchNext({requestId,claimEventId}={}){
    if(!text(requestId)||!text(claimEventId))return stop('request_and_claim_event_required');
    let job;
@@ -80,6 +96,7 @@ export function createDotSessionDispatchClient({nativeTools,reviewContinuation,r
     // different request; a concurrent unexpected claim is retained without send.
     if(queued.length!==1||queued[0].requestId!==requestId)return stop('single_selected_queued_request_required');
     const selected=queued[0];
+    if(!Number.isSafeInteger(selected.version)||selected.version<1||!Number.isSafeInteger(selected.requestVersion)||selected.requestVersion<1)throw error('request_version_unverified');
     const request=await context(selected,{admission:true}),raw=await read(selected);
     const initial=await review(selected,request,raw);
     const claimed=await tools.claim({eventId:claimEventId});

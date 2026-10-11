@@ -1,3 +1,5 @@
+import {candidateCapabilities} from './src/domain/candidates.mjs';
+import {createCandidateService} from './src/application/candidate-service.mjs';
 import {readEnvironmentProjectRegistry,withIndependentProjectRegistry,gateIntakeByProjectRegistry} from './src/adapters/project-registry.mjs';
 import {intakeCapabilities} from './src/domain/intake.mjs';
 import {createIntakeService} from './src/application/intake-service.mjs';
@@ -10,7 +12,7 @@ import {handleRequest} from './src/presentation/http.mjs';
 import {parseSnapshot,readEnvironmentSnapshot} from './src/adapters/snapshot.mjs';
 import {boardConfig} from './config/board.mjs';
 const root=fileURLToPath(new URL('.',import.meta.url));
-export function createBoardServer({env=process.env,intakeStore=null,authenticateIntakeRequest=null}={}) {
+export function createBoardServer({env=process.env,intakeStore=null,candidateStore=null,authenticateIntakeRequest=null}={}) {
   const registry=readEnvironmentProjectRegistry(env);
   async function readSnapshot() {
     if (!env.DOT_BOARD_SNAPSHOT_PATH) return withIndependentProjectRegistry(readEnvironmentSnapshot(env),registry);
@@ -30,9 +32,12 @@ export function createBoardServer({env=process.env,intakeStore=null,authenticate
       const options={method:req.method,headers:requestHeaders};
       if(!['GET','HEAD'].includes(req.method)){options.body=req;options.duplex='half';}
       const request=new Request(`${origin}${req.url}`,options);
-      const capabilities=gateIntakeByProjectRegistry(intakeCapabilities(env,Boolean(intakeStore)),registry);
+      let capabilities=gateIntakeByProjectRegistry(intakeCapabilities(env,Boolean(intakeStore)),registry);
       const service=createIntakeService({store:intakeStore,readBoard:()=>readBoard(readSnapshot,boardConfig),capabilities});
-      const response=await handleRequest(request,{readSnapshot,config:boardConfig,intake:{service,capabilities,hostEnabled:false},getAsset:path=>readFile(new URL(`./public${path}`,import.meta.url))});
+      const candidateCaps=candidateCapabilities(capabilities,Boolean(candidateStore)&&await candidateStore.available());
+      const candidates=candidateCaps.storageAvailable?createCandidateService({store:candidateStore,requests:service,readBoard:()=>readBoard(readSnapshot,boardConfig),capabilities:candidateCaps}):null;
+      capabilities={...capabilities,candidates:candidateCaps};
+      const response=await handleRequest(request,{readSnapshot,config:boardConfig,intake:{service,capabilities,candidates,hostEnabled:false},getAsset:path=>readFile(new URL(`./public${path}`,import.meta.url))});
       res.writeHead(response.status,Object.fromEntries(response.headers));
       res.end(Buffer.from(await response.arrayBuffer()));
     } catch {res.writeHead(500,{'content-type':'text/plain','cache-control':'no-store'});res.end('Unable to read board');}

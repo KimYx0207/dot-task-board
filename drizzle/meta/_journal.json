@@ -64,6 +64,13 @@
       "when": 1791580000000,
       "tag": "0008_task_requirements",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "6",
+      "when": 1791738000000,
+      "tag": "0009_task_candidates",
+      "breakpoints": true
     }
   ]
 }

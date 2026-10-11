@@ -15,7 +15,19 @@
       "project": "演示项目",
       "state": "running",
       "observedAt": "2026-01-01T12:00:00Z",
-      "ownerRole": "A role label is not an extra agent"
+      "ownerRole": "A role label is not an extra agent",
+      "goal": "示例：把分散的发布资料汇成一份有负责人和检查标准的清单。",
+      "acceptanceCriteria": "示例：逐项列出交付物、负责人、确认方法和原始链接。",
+      "stage": "候选清单复核",
+      "observation": "合成场景：实现者已整理清单结构，复检者等待确认项目范围。",
+      "nextAction": "核对范围与完成标准，再安排原任务继续。",
+      "blocker": "示例：等待范围确认",
+      "evidence": [
+        {
+          "label": "示例资料：公开项目说明（非执行成果）",
+          "url": "https://github.com/KimYx0207/dot-task-board"
+        }
+      ]
     },
     {
       "id": "sample-paused",
@@ -25,7 +37,9 @@
       "stage": "等待安排",
       "observedAt": null,
       "observation": "明确暂停的示例任务不会被当成正在执行",
-      "nextAction": "等待明确安排"
+      "nextAction": "等待明确安排",
+      "goal": "示例：整理参考资料索引。",
+      "acceptanceCriteria": "示例：每条资料保留标题和原链接。"
     }
   ],
   "agents": [
