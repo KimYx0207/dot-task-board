@@ -75,11 +75,19 @@ The lifecycle retains the existing implementation limits:
 
 The implementation follows the authenticated discovery, subscription, verification and signed-delivery flow described in [OpenAI MCP Events](https://developers.openai.com/plugins/build/mcp-events). Advertising protocol version `2026-07-28` does not certify that a specific plugin/chat connection has passed acceptance.
 
+### Standard request metadata
+
+The Events MCP boundary accepts `params._meta` as protocol metadata, separately from the strict subscription/unsubscription business fields. When supplied, it must be an object with the standard string `io.modelcontextprotocol/protocolVersion` and object `io.modelcontextprotocol/clientCapabilities`; known optional fields are shape-checked, while valid extension metadata remains opaque. The version must be supported and match a supplied `MCP-Protocol-Version` header. Malformed metadata returns HTTP 400 / `-32602`; unsupported metadata versions use `-32022`, and header mismatches use `-32020`.
+
+Metadata is removed before the Events service receives the request. It is not authorization, subscription identity, stored subscription data or callback policy. Existing metadata-free callers retain their previous behavior; this narrow compatibility fix does not claim full implementation of every 2026-07-28 protocol requirement. Unknown business parameters still fail closed. See the [MCP request metadata specification](https://modelcontextprotocol.io/specification/2026-07-28/basic/index#meta).
+
 ### Safe failure reporting
 
 When the direct flag or trusted policy is missing, subscription fails closed before callback access. Policy failures use `sites_event_transport_not_ready` (HTTP 503, JSON-RPC `-32014`) and a categorized reason such as `direct_events_disabled`, `callback_policy_missing`, `deployment_policy_mismatch`, `runtime_contract_missing`, `runtime_contract_unsupported`, `callback_origin_unverified` or `callback_origin_not_approved`. Missing storage and denied authorization have their own existing errors; error ordering is not proof of other readiness.
 
-For a syntactically valid offered URL, an error may include only its normalized `offeredCallbackOrigin` in addition to the safe error category. Never expose its callback path/query, signing secret, policy record, evidence references or raw provider exception. An offered origin is diagnostic input for independent review, not authorization to approve it.
+Event-service and metadata rejections emit one `mcp_event_rejected` console record with a reconstructed safe error. Both this record and the JSON-RPC error use allowlisted categories, numeric codes and optional categorized reasons. An offered URL that passes callback syntax and conservative diagnostic checks may contribute only its normalized `offeredCallbackOrigin`; malformed or unsafe URLs omit it. The origin is recomputed from the request, never trusted from exception data. Unknown exception fields, `toJSON`, messages and stacks are not serialized. Logging failure cannot change the rejection.
+
+Never expose callback userinfo, paths, queries, fragments, signing secrets/signatures, policy records, evidence references, request content or raw provider exceptions. Early ingress/authentication responses retain their existing behavior; this record does not claim to observe every rejected request. An offered origin is diagnostic input for independent review, not authorization to approve it. A 400 disappearing while `direct_events_disabled` or `callback_policy_missing` remains is not signed-delivery or native-chat acceptance.
 
 ## Durable save, approval and bounded immediate delivery
 

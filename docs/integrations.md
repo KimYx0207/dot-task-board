@@ -86,6 +86,8 @@ The repository includes a `cloud_threads` capability adapter, but no connected n
 
 ## Events and webhooks: experimental
 
+The Events boundary validates and strips standard request `params._meta` before strict business validation. Metadata never grants access or enters subscription identity/storage. Rejection logs and RPC errors expose only allowlisted error categories and a validated normalized callback origin, never callback paths, secrets or raw exceptions. Metadata-free callers remain compatible; this change does not establish live native delivery. See [metadata and safe failures](sites-direct-events.md#standard-request-metadata).
+
 The generic Worker, candidate host and owner-private Sites have different readiness gates. Sites advertises the direct Events directory whenever intake MCP is enabled and the relay is off, including when direct delivery is off. Subscription and delivery require available storage, `DOT_BOARD_EVENTS_ENABLED=true` and the separately verified [Sites deployment policy](sites-direct-events.md). Its optional relay remains a distinct path; both delivery flags together fail closed. Sites scheduled draining stays disabled.
 
 For the generic Worker, `DOT_BOARD_EVENTS_ENABLED=true` enables experimental Events methods when their storage exists; the flag is off by default. Sites directory discovery is independent of that flag, while direct subscriptions and transport require it plus the verified policy. The implementation advertises experimental protocol value `2026-07-28`; compatibility with any particular client is not established by that identifier.

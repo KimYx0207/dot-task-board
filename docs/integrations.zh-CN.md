@@ -86,6 +86,8 @@
 
 ## Events 与 Webhook：实验性
 
+Events 边界先校验并剥离标准请求 `params._meta`，再按原有白名单校验业务字段。元数据不授予权限，也不进入订阅身份或存储。拒绝日志及 RPC 错误仅包含白名单错误类别和经校验、规范化的回调 origin，绝不包含路径、密钥或原始异常。不带元数据的既有调用仍兼容；此修复不代表真实原生投递验收通过。详见 [元数据及安全失败诊断](sites-direct-events.md#standard-request-metadata)。
+
 通用 Worker、候选宿主和所有者私有 Sites 的就绪条件不同。Sites 在需求 MCP 开启且中继关闭时提供直接 Events 目录，即使直接投递关闭。订阅与投递要求存储可用、`DOT_BOARD_EVENTS_ENABLED=true` 和独立核实的 [Sites 部署策略](sites-direct-events.md)。可选中继仍是独立路径；两个投递开关同时开启会拒绝服务。Sites 定时处理仍关闭。
 
 通用 Worker 的 `DOT_BOARD_EVENTS_ENABLED=true` 在事件存储存在时启用实验性 Events 方法，默认关闭。Sites 目录发现不依赖此开关，但直接订阅和传输要求开关开启且策略经过核实。实现声明实验协议值 `2026-07-28`，该标识本身不代表与某个客户端已经兼容。
