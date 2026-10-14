@@ -100,3 +100,23 @@ body{background:var(--bg)}button:hover{border-color:#c8c2dc}button:focus-visible
 .request-inbox-details{margin-bottom:16px;font-size:12px;color:var(--muted)}
 .request-inbox-details>summary{cursor:pointer;min-height:44px;padding:12px 0}
 .request-inbox-details .inbox-banner{margin-bottom:0}
+
+/* Decision-first overview: full source records stay in accessible disclosures. */
+.pc-overview{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:0 0 10px}
+.pc-overview-item{display:grid;grid-template-columns:auto 1fr;gap:3px 10px;align-items:center;padding:15px 18px;background:var(--surface);border:1px solid var(--line);border-radius:10px}
+.pc-overview-item strong{font-size:27px;line-height:1.2;font-weight:600;grid-row:1/3;color:var(--ink)}
+.pc-overview-item span{font-size:12px;color:var(--ink)}
+.pc-overview-item small{font-size:10px;line-height:1.5;color:var(--muted)}
+.pc-overview-item[data-kind=blocked] strong{color:#93643e}
+.pc-overview-item[data-kind=running] strong{color:#596b9a}
+.pc-overview-note{font-size:11px;color:var(--muted);line-height:1.7;margin:0 0 18px}
+.pc-preview{font-size:12px;line-height:1.7;color:var(--muted);margin:10px 0 0;overflow-wrap:anywhere}
+.pc-next-brief{display:grid;grid-template-columns:52px minmax(0,1fr);gap:8px;margin-top:10px;font-size:12px;line-height:1.65;overflow-wrap:anywhere}
+.pc-next-brief strong{font-size:11px;font-weight:500;color:var(--muted);white-space:nowrap}
+.pc-task-details[open] .pc-progress .pc-copy,.pc-task-details[open] .pc-next .pc-copy{display:block;overflow:visible;-webkit-line-clamp:unset}
+.pc-task-details[open]{padding-bottom:6px}.pc-task-details .pc-progress{padding-top:8px;border-top:1px solid var(--line)}
+.pc-task-details .pc-next{display:block;padding-top:10px}.pc-task-details .pc-next h3{margin-bottom:5px}
+@media(max-width:1000px){.pc-overview-item{padding:12px;gap:2px 7px}.pc-overview-item strong{font-size:23px}}
+@media(max-width:600px){.pc-overview{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.pc-overview-item{padding:12px 14px}.pc-overview-note{margin-bottom:12px}.pc-next-brief{grid-template-columns:48px minmax(0,1fr)}}
+
+.pc-preview>p{margin:0}.pc-preview>h3{margin-bottom:3px;font-size:10px}
