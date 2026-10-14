@@ -34,7 +34,7 @@ export async function drainSourceObservations({ownerId,outbox,bridge,limit=20,cl
  const result={accepted:0,pending:0};
  for(const row of await outbox.due(ownerId,{limit})){
   const claimed=await outbox.claim(ownerId,row.eventId);if(!claimed)continue;
-  try{const ack=await bridge.enqueue(ownerId,claimed.event);if(ack?.eventId!==claimed.event.eventId)throw Error('invalid_ack');await outbox.ack(ownerId,claimed.event.eventId,claimed.leaseToken);result.accepted++;}
+  try{const ack=await bridge.enqueue(ownerId,claimed.event);if(ack?.eventId!==claimed.event.eventId)throw Error('invalid_ack');const persisted=await outbox.ack(ownerId,claimed.event.eventId,claimed.leaseToken);if(persisted===true)result.accepted++;else result.pending++;}
   catch{await outbox.retry(ownerId,claimed.event.eventId,claimed.leaseToken,{nextAttemptAt:new Date(clock()+Math.min(60000,1000*2**Math.min(claimed.attempts,6))).toISOString()});result.pending++;}
  }
  return result;
