@@ -75,6 +75,20 @@ export function compactTaskFacts(clarity) {
   return {progress,blocker:progressIsBlocker?'':blocker,next:progressIsNext||blockerIsNext?'':next,progressIsBlocker,progressIsNext,blockerIsNext};
 }
 
+// Presentation excerpts never replace the full source text kept in disclosures.
+export function taskExcerpt(value, limit=76) {
+  const chars=Array.from(safe(value).replace(/\s+/g,' ').trim());
+  return chars.length>limit?chars.slice(0,limit).join('')+'…':chars.join('');
+}
+export function overviewCounts(tasks, board, queue, now=Date.now(), staleAfterMinutes=120) {
+  const records=list(tasks).map(task=>taskClarity(task,board,queue,now,staleAfterMinutes));
+  return {running:records.filter(c=>!c.stopped&&!c.manualCompleted&&c.executionState==='running').length,
+    blocked:records.filter(c=>!c.stopped&&!c.manualCompleted&&(c.displayState==='blocked'||Boolean(c.blocker))).length,
+    paused:records.filter(c=>c.displayState==='paused').length,
+    completed:records.filter(c=>c.displayState==='completed').length,
+    unverified:records.filter(c=>!c.stopped&&!c.manualCompleted&&c.freshness!=='current').length};
+}
+
 function dom(container) {
   const doc = container.ownerDocument;
   const el = (tag, cls = '', value) => { const node = doc.createElement(tag); node.className = cls; if (value !== undefined) node.textContent = safe(String(value)); return node; };
@@ -90,6 +104,16 @@ export function renderProjectClarity(container, board, queue, {project = '', que
   const scope = disclosure('pc:scope', '视图范围与统计', 'pc-scope');
   scope.append(el('p', 'pc-scope-count', recordScope==='archive'?`归档历史 · ${scopeCounts.registeredTasks} 项记录`:project ? `当前项目 · ${model.metrics.tasks} 项登记任务` : `${scopeCounts.businessProjects} 个有效业务项目 · ${scopeCounts.businessTasks} 项业务任务`));
   scope.append(el('span', 'pc-muted', (query || taskState !== 'all') ? `筛选后 ${model.metrics.projects} 个项目 · ${model.metrics.tasks} 项任务` : recordScope==='business'?'当前业务视图；取消历史仅在归档查看':`已登记 ${scopeCounts.registeredProjects} 个项目分组、${scopeCounts.registeredTasks} 项任务；含 ${scopeCounts.historicalTasks} 项取消历史，均保留可查`));
+  if(contentType!=='agents'){
+    const visibleIds=new Set(model.projects.flatMap(group=>group.tasks.map(task=>task.id)));
+    const counts=overviewCounts(list(board.tasks).filter(task=>visibleIds.has(task.id)),board,queue,now,staleAfterMinutes);
+    const overview=el('section','pc-overview');overview.setAttribute('aria-label','当前视图概览');
+    for(const [key,label,note] of [['running','执行中','有近期执行回执'],['blocked','有卡点','按已有记录'],['paused','已暂停','保持原安排'],['completed','有完成记录','不代表后续升级完成']]){
+      const item=el('div','pc-overview-item');item.dataset.kind=key;item.append(el('strong','',counts[key]),el('span','',label),el('small','',note));overview.append(item);
+    }
+    root.append(overview);
+    root.append(el('p','pc-overview-note',`当前视图 · ${visibleIds.size} 项任务 · ${counts.unverified} 项进展待核实。统计可重叠；展开看完整记录，更新进展只重读已有数据。`));
+  }
   const grid = el('div', 'pc-grid'); if (project) grid.classList.add('is-selected');
   for (const group of model.projects) {
     if(contentType === 'agents' && !group.agents.length) continue;
@@ -110,7 +134,7 @@ export function renderProjectClarity(container, board, queue, {project = '', que
       const status = statusController ? createQuickStatus(container,task,c,statusController) : el('span', 'pc-status', c.status); status.dataset.state = c.manual ? c.manual.state : c.stopped ? task.state : c.executionState === 'running' ? 'running' : task.state === 'running' ? 'unknown' : task.state;
       if(c.manual&&!statusController) status.append(el('span','pc-manual-origin','手动'));
       heading.append(title, status); article.append(heading);
-      const details=disclosure('pc:details:'+task.id,'任务要求与记录','pc-task-details');
+      const details=disclosure('pc:details:'+task.id,'完整进展、需求与记录','pc-task-details');
       const demand=el('section','pc-demand');demand.dataset.sourceKind='task-record';
       demand.append(el('h3','','既有任务需求'),el('p','pc-stamp','来源：当前任务记录 · 与新增需求/反馈记录分别保留'));
       for(const [label,value] of [['目标',task.goal],['完成标准',task.acceptanceCriteria]]){
@@ -135,7 +159,9 @@ export function renderProjectClarity(container, board, queue, {project = '', que
         if(historicalObservation)details.append(el('p','pc-stamp','历史导入记录不代表当前部署统计，也不是自动接续验收结果。'));
         progress.append(el('p', 'pc-copy', c.progress));
         if(task.observedAt)progress.append(el('span', 'pc-stamp', utcTime(task.observedAt) + (c.freshness === 'old' ? (c.manualCompleted?' · 历史观察已过期，手动完成决定保持':' · 观察已过期，当前进展待核实') : c.freshness === 'future' ? ' · 时间待核实' : '')));
-        article.append(progress);
+        details.append(progress);
+        const preview=el('section','pc-preview');preview.append(el('h3','', [historicalObservation?'历史导入摘录':'进展摘录',facts.progressIsBlocker?(c.freshness==='current'?'卡点':'记录卡点'):'',facts.progressIsNext?'下一步':''].filter(Boolean).join(' · ')),el('p','',taskExcerpt(facts.progress)));preview.setAttribute('aria-label','进展记录摘录');article.append(preview);
+        if(task.observedAt)article.append(el('p','pc-stamp',utcTime(task.observedAt)+(c.freshness==='old'?(c.manualCompleted?' · 历史观察已过期，手动完成决定保持':' · 观察已过期，当前进展待核实'):c.freshness==='future'?' · 时间待核实':'')));
       }
       if(!task.observedAt) article.append(el('p','pc-stamp',c.manualCompleted?'历史观察时间未记录 · 手动完成决定保持':'观察时间未记录 · 当前进展待核实'));
       if (c.execution) {
@@ -144,7 +170,7 @@ export function renderProjectClarity(container, board, queue, {project = '', que
         receipt.append(el('p', 'pc-receipt-title', safe(c.execution.displayTitle) || safe(c.execution.title, '本次执行')), el('p', 'pc-copy', safe(c.execution.summary) || safe(c.execution.lastEffectiveAction) || '尚无结果摘要'), el('span', 'pc-stamp', '回执时间：' + utcTime(c.execution.lastExecutionObservedAt || c.execution.lastLifecycleObservedAt || c.execution.observedAt)), el('p', 'pc-receipt-note', '这条回执只对应本次执行，不代表整个项目已完成。')); details.append(receipt);
       }
       if (facts.blocker) { const block = disclosure('pc:blocker:' + task.id, (c.freshness === 'current' ? '卡点 · ' : '记录卡点 · ') + (facts.blockerIsNext?'下一步 · ':'') + Array.from(facts.blocker).slice(0, 54).join('') + (Array.from(facts.blocker).length > 54 ? '…' : ''), 'pc-blocker'); block.append(el('p', 'pc-copy', facts.blocker)); article.append(block); }
-      if(facts.next){const next = el('div', 'pc-next'); next.append(el('h3', '', c.stopped ? '当前安排' : c.manual?.state === 'completed' ? '状态备注' : '下一步'), el('p', 'pc-copy', facts.next)); article.append(next);}
+      if(facts.next){const label=c.stopped?'当前安排':c.manual?.state==='completed'?'状态备注':'下一步';const next = el('div', 'pc-next'); next.append(el('h3', '',label), el('p', 'pc-copy', facts.next)); details.append(next);const brief=el('div','pc-next-brief');brief.append(el('strong','',label),el('span','',taskExcerpt(facts.next,64)));article.append(brief);}
       renderTaskHistory(details,c.history);
       const footer = el('div', 'pc-footer'), evidence = list(task.evidence); footer.append(button(evidence.length ? `进展详情 · ${evidence.length} 项证据` : '查看进展详情', () => onTask?.(task.id), 'pc:evidence:' + task.id));
       if (task.state === 'completed' && !c.manual) footer.append(el('span', 'pc-muted', '来源完成记录'));

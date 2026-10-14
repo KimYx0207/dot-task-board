@@ -31,8 +31,8 @@ test('default project cards lead with progress while requirements, provenance an
   const visible=visibleText(root),card=nodes(root,'pc-task')[0],details=nodes(root,'pc-task-details')[0];
   for(const copy of ['Synthetic project','Preview is ready to inspect','The export is still missing','Check the export','Assigned reviewer'])assert(visible.includes(copy),copy);
   for(const copy of ['A detailed bounded goal','A detailed acceptance criterion','Agent 当前活动未核实','个有效业务项目'])assert(!visible.includes(copy),copy);
-  assert.equal(details.tagName,'DETAILS');assert.equal(details.open,false);assert(card.children.indexOf(nodes(root,'pc-progress')[0])<card.children.indexOf(details));
-  assert.equal(root.children[0].children[0].className,'pc-grid');
+  assert.equal(details.tagName,'DETAILS');assert.equal(details.open,false);assert(card.children.indexOf(nodes(root,'pc-preview')[0])<card.children.indexOf(details));assert(details.children.includes(nodes(root,'pc-progress')[0]));
+  assert.equal(root.children[0].children[0].className,'pc-overview');assert(nodes(root,'pc-grid').length);assert.equal(nodes(root,'pc-overview-item').length,4);
   details.open=true;details.events.toggle();renderProjectClarity(root,value,null,{now,onTask:id=>opened.push(id)});
   assert.equal(nodes(root,'pc-task-details')[0].open,true);assert(visibleText(root).includes('A detailed bounded goal'));assert(visibleText(root).includes('Agent 当前活动未核实'));
   nodes(root,'pc-footer')[0].children[0].click();assert.deepEqual(opened,['synthetic-task']);assert.deepEqual(value,before);
@@ -40,7 +40,7 @@ test('default project cards lead with progress while requirements, provenance an
 
 test('freshness, blockers and manual stop decisions remain visible after subtraction',()=>{
   const value=board();value.tasks[0].observedAt='2026-10-01T12:00:00Z';const root=setup();renderProjectClarity(root,value,null,{now});
-  assert.match(visibleText(root),/历史导入记录/);assert.match(visibleText(root),/观察已过期，当前进展待核实/);assert.match(visibleText(root),/记录卡点/);
+  assert.match(visibleText(root),/历史导入摘录/);assert.match(visibleText(root),/Preview is ready to inspect/);assert.match(visibleText(root),/观察已过期，当前进展待核实/);assert.match(visibleText(root),/记录卡点/);assert.match(nodes(root,'pc-task-details')[0].textContent,/历史导入记录/);assert.match(nodes(root,'pc-task-details')[0].textContent,/观察已过期，当前进展待核实/);
   value.tasks[0].manualStatus={state:'completed',version:1,source:'owner_manual',reason:'Owner confirmed this bounded result'};
   renderProjectClarity(root,value,null,{now});assert.match(visibleText(root),/已完成手动/);assert.match(visibleText(root),/Owner confirmed this bounded result/);assert.doesNotMatch(visibleText(root),/The export is still missing|Check the export/);
   assert.match(nodes(root,'pc-task-details')[0].textContent,/The export is still missing/);
@@ -149,7 +149,7 @@ test('app decision shortcuts explicitly choose proposed candidates and the uniqu
 
 test('identical progress, blocker and next action render once with every field still identified',()=>{
   const value=board(),task=value.tasks[0],copy='One exact source sentence';Object.assign(task,{observation:copy,blocker:copy,nextAction:copy});const before=structuredClone(value),root=setup();
-  renderProjectClarity(root,value,null,{now});assert.equal(visibleText(root).split(copy).length-1,1);assert.match(visibleText(root),/最新进展 · 卡点 · 下一步/);assert.equal(nodes(root,'pc-blocker').length,0);assert.equal(nodes(root,'pc-next').length,0);assert.deepEqual(value,before);
+  renderProjectClarity(root,value,null,{now});assert.equal(visibleText(root).split(copy).length-1,1);assert.match(visibleText(root),/进展摘录 · 卡点 · 下一步/);assert.match(nodes(root,'pc-task-details')[0].textContent,/最新进展 · 卡点 · 下一步/);assert.equal(nodes(root,'pc-blocker').length,0);assert.equal(nodes(root,'pc-next').length,0);assert.deepEqual(value,before);
   task.observation='Different observation';renderProjectClarity(root,value,null,{now});assert.equal(visibleText(root).split(copy).length-1,1);assert.match(visibleText(root),/卡点 · 下一步/);assert(visibleText(root).includes(task.observation));
   task.nextAction='A genuinely different next action';renderProjectClarity(root,value,null,{now});assert(visibleText(root).includes(task.nextAction));assert.equal(nodes(root,'pc-next').length,1);
 });
